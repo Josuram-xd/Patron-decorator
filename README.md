@@ -154,3 +154,13 @@ requirements.md ──► architecture.md / design.md / api-contract.md ──�
 1. Nada se implementa si no está en una spec.
 2. Cada tarea de `tasks.md` referencia los requisitos (`RF-xx`) que cumple.
 3. Si el código necesita algo que la spec no dice, **se actualiza la spec primero**.
+
+
+Cambios hechos por el grupo 2:
+
+
+William Eduardo Cando Cuarán
+Victor Manuel Aguilar Agredo
+Samuel Santiago Hurtado Argoti
+
+
