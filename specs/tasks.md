@@ -119,7 +119,7 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
 
 ## F2 — Engine · paquete `com.rpgdecorator.engine`
 
-### T-201 [ ] `EffectManager` + `InteractionRules` · `ENG`
+### T-201 [x] `EffectManager` + `InteractionRules` · `ENG`
 - **Depende de:** T-107
 - **Specs:** design §3.2, §3.3, §3.5, §4.4, §4.5, §5.4 · RF-10, RF-11, RF-16, RF-17, RF-18 · ADR-002
 - **Hacer:** `engine/effects/EffectManager`, `InteractionRules`, `Layer`, `RemovalReason`.
@@ -132,18 +132,18 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
   - `layers()` devuelve las stats efectivas por capa.
   - `equip` respeta la invariante del orden (equipo por dentro).
 
-### T-202 [ ] `DamageCalculator` · `ENG` ⚡
+### T-202 [x] `DamageCalculator` · `ENG` ⚡
 - **Depende de:** T-107
 - **Specs:** design §4.1
 - **Aceptación:** tests con un `RandomSource` fijo: crítico, evasión (tope 25 %), mitigación mínima 1, elemental sin mitigar.
 
-### T-203 [ ] `Combat`, `Action`, `TurnContextImpl` · `ENG`
+### T-203 [x] `Combat`, `Action`, `TurnContextImpl` · `ENG`
 - **Depende de:** T-201
 - **Specs:** design §5.1, §5.2, §2.3
 - **Hacer:** `engine/combat/Combat`, `CombatStatus`, `Action` (sealed: `Attack`, `Defend`, `UseAbility`, `Pass`), `TurnContextImpl`, `InvalidActionException`.
 - **Aceptación:** `TurnContextImpl.directDamage` y `heal` resuelven la **cadena exterior** por id y usan su `maxHealth` efectiva (test con LifeAmulet: curar puede superar la vida máxima base).
 
-### T-204 [ ] `CombatEngine.executeRound` · `ENG`
+### T-204 [~] (ENG) `CombatEngine.executeRound` · `ENG`
 - **Depende de:** T-202, T-203
 - **Specs:** design §5.3, §4.7 · RF-05–RF-09, RF-15
 - **Aceptación:**
@@ -154,7 +154,7 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
   - El orden de resolución de habilidades de §4.7; los efectos sobre el rival no se aplican si hubo evasión.
   - `VICTORY` / `DEFEAT` + `COMBAT_ENDED`; acción posterior → `InvalidActionException`.
 
-### T-205 [ ] `EnemyAI` · `ENG` ⚡
+### T-205 [~] (ENG) `EnemyAI` · `ENG` ⚡
 - **Depende de:** T-203
 - **Specs:** design §4.8
 - **Aceptación:** por cada enemigo, un test que fuerza la condición de cada habilidad y verifica la elección; sin habilidades disponibles → `Attack`.
@@ -326,3 +326,6 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
 |---|---|---|---|
 | 2026-10-02 | — | ORQ | Specs iniciales creadas |
 | 2026-10-02 | — | ORQ | Código en inglés (ADR-004): specs y estructura de carpetas actualizadas |
+| 2026-10-02 | T-201 | ENG | `EffectManager`, `InteractionRules`, `Layer` + 50 tests. Verificado contra stubs del dominio (el dominio real F1 aún no está en el repo): revalidar al integrar F1 |
+| 2026-10-02 | T-202 | ENG | `DamageCalculator` + 13 tests. Verificado contra stubs del dominio: revalidar al integrar F1 |
+| 2026-10-02 | T-203 | ENG | `Combat`, `Action`, `TurnContextImpl`, `LoggedEvent`, `ErrorCode`, `InvalidActionException` + 31 tests (contra stubs del dominio) |

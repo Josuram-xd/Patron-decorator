@@ -655,6 +655,7 @@ class EffectManagerTest {
                 case EffectApplied e -> e.targetId();
                 case EffectRefreshed e -> e.targetId();
                 case EffectRemoved e -> e.targetId();
+                default -> throw new AssertionError("Unexpected event: " + event);
             };
             assertEquals(HERO, target);
         }
