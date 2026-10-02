@@ -14,22 +14,32 @@ import com.rpgdecorator.domain.event.CombatEvent;
 import com.rpgdecorator.domain.event.CombatEvent.DamageDealt;
 import com.rpgdecorator.domain.event.CombatEvent.TurnSkipped;
 import com.rpgdecorator.domain.event.RemovalReason;
+import com.rpgdecorator.engine.ExpeditionRepository;
 import com.rpgdecorator.engine.combat.Action;
 import com.rpgdecorator.engine.combat.Combat;
 import com.rpgdecorator.engine.combat.CombatEngine;
 import com.rpgdecorator.engine.combat.DamageCalculator;
+import com.rpgdecorator.engine.combat.EnemyAI;
 import com.rpgdecorator.engine.combat.LoggedEvent;
 import com.rpgdecorator.engine.combat.TurnContextImpl;
+import com.rpgdecorator.engine.expedition.Expedition;
+import com.rpgdecorator.engine.expedition.ExpeditionService;
+import com.rpgdecorator.engine.expedition.ExpeditionStatus;
+import com.rpgdecorator.engine.expedition.SeededRandom;
 import com.rpgdecorator.engine.effects.EffectManager;
 import com.rpgdecorator.engine.effects.Layer;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.LongFunction;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static com.rpgdecorator.domain.catalog.Slot.WEAPON;
 
 class DecoratorScenarioTest {
 
@@ -156,6 +166,68 @@ class DecoratorScenarioTest {
         assertEquals(heroHealthBeforeRound, combat.hero().currentHealth());
     }
 
+    @Test
+    void victoryKeepsSwordPurgesEffectsHealsAndOffersThreeRewards() {
+        EffectManager effects = new EffectManager();
+        ExpeditionService service = expeditionService(effects, seed -> new ScenarioRandom());
+        Expedition expedition = service.create("archer", "sword", SCENARIO_SEED);
+        Combat combat = expedition.currentCombat();
+        TurnContextImpl setupContext = new TurnContextImpl(combat, new ScenarioRandom());
+        Combatant hero = effects.apply(combat.hero(), "poison", setupContext);
+        hero = effects.apply(hero, "rage", setupContext);
+        hero.changeHealth(40 - hero.currentHealth(), hero.stats().maxHealth());
+        combat.setHero(hero);
+        assertEquals("Furia(Envenenado(Espada(Arquero)))", hero.describeChain());
+        assertEquals(40, hero.currentHealth());
+        assertEquals(95, hero.stats().maxHealth());
+        combat.enemy().changeHealth(1 - combat.enemy().currentHealth(), combat.enemy().stats().maxHealth());
+
+        service.act(expedition.id(), Action.attack());
+
+        assertEquals(ExpeditionStatus.AWAITING_REWARD, expedition.status());
+        assertEquals("Espada(Arquero)", combat.hero().describeChain());
+        assertEquals("sword", expedition.equipped(WEAPON));
+        assertEquals(68, combat.hero().currentHealth());
+        assertEquals(3, expedition.offeredRewards().size());
+        assertFalse(effects.hasEffect(combat.hero(), "poison"));
+        assertFalse(effects.hasEffect(combat.hero(), "rage"));
+    }
+
+    @Test
+    void expeditionsCreatedWithSameSeedHaveIdenticalEnemySequences() {
+        EffectManager effects = new EffectManager();
+        ExpeditionService service = expeditionService(effects, SeededRandom::new);
+
+        Expedition first = service.create("warrior", "sword", SCENARIO_SEED);
+        Expedition second = service.create("warrior", "sword", SCENARIO_SEED);
+
+        assertEquals(first.enemyIdsByLevel(), second.enemyIdsByLevel());
+    }
+
+    private static ExpeditionService expeditionService(EffectManager effects,
+                                                        LongFunction<RandomSource> randomFactory) {
+        ExpeditionRepository repository = new ExpeditionRepository() {
+            private final ConcurrentHashMap<String, Expedition> expeditions = new ConcurrentHashMap<>();
+
+            @Override
+            public void save(Expedition expedition) {
+                expeditions.put(expedition.id(), expedition);
+            }
+
+            @Override
+            public Optional<Expedition> findById(String id) {
+                return Optional.ofNullable(id == null ? null : expeditions.get(id));
+            }
+
+            @Override
+            public boolean delete(String id) {
+                return expeditions.remove(id) != null;
+            }
+        };
+        CombatEngine engine = new CombatEngine(effects, new DamageCalculator(), new EnemyAI(effects)::decide);
+        return new ExpeditionService(repository, effects, engine, randomFactory, () -> SCENARIO_SEED);
+    }
+
     private static Combat newCombat(Combatant hero) {
         return new Combat("scenario-combat", hero, BaseCharacter.enemy(EnemyCatalog.get("goblin")),
                 HeroClassCatalog.get("warrior").abilities(), EnemyCatalog.get("goblin"));
@@ -163,6 +235,19 @@ class DecoratorScenarioTest {
 
     private static TurnContextImpl context(Combat combat) {
         return new TurnContextImpl(combat, new SeededRandomSource(SCENARIO_SEED));
+    }
+
+    private static final class ScenarioRandom implements RandomSource {
+
+        @Override
+        public int nextInt(int minInclusive, int maxInclusive) {
+            return minInclusive;
+        }
+
+        @Override
+        public boolean chance(int percent) {
+            return false;
+        }
     }
 
     private static final class SeededRandomSource implements RandomSource {
