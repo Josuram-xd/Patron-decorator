@@ -293,7 +293,7 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
 - **Hacer:** `src/test/java/com/rpgdecorator/scenarios/*ScenarioTest.java`.
 - **Aceptación:** un test por escenario Gherkin, con semilla fija.
 
-### T-503 [ ] `ArchitectureTest` · `QA` ⚡
+### T-503 [x] `ArchitectureTest` · `QA` ⚡
 - **Depende de:** T-207
 - **Specs:** architecture §2 (regla de dependencias), AGENTS §3
 - **Hacer:** test que recorre los `.java` de `src/main` y falla si `domain` importa `engine`/`api`/`infrastructure`, si `engine` importa `api`, o si hay un `import` de librerías prohibidas o de `java.lang.reflect.Proxy`.
@@ -340,3 +340,4 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
 | 2026-10-02 | T-301 | API | `JsonValue` (sealed), `Json.write`/`Json.parse` e `InvalidJsonException` con posición + 10 tests |
 | 2026-10-02 | T-302 | API | `HttpApiServer`, `Router`, `Cors`, `HttpError` y `/api/health` + 11 tests de integración con `HttpClient` |
 | 2026-10-02 | T-206, T-207 | ENG | `Expedition`, `EnemyDraw`, `RewardDraw`, `RunStatistics`, `SeededRandom`, `ExpeditionService` y `ExpeditionRepository` alineados con el dominio real (`Slot` en `domain.catalog`) + 29 tests. 266 tests en verde; verificado con JDK 21 (`-Dmaven.compiler.release=21`) por Q-015 |
+| 2026-10-02 | T-503 | QA | `ArchitectureTest`: comprueba dependencias entre capas e imports prohibidos |
