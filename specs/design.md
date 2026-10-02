@@ -1,13 +1,14 @@
 # Diseño — RPG Decorator
 
 > El **cómo** en detalle. Si algo aquí contradice a `requirements.md`, manda `requirements.md` y se reporta en `open-questions.md`.
+> **Código en inglés** (ADR-004). Los textos visibles para el jugador (`label`, `name`, `description` de los catálogos) van en español. Ver `glossary.md`.
 
 Índice:
 1. Mapa del patrón Decorator
 2. Contratos del dominio
 3. Trampas del Decorator y cómo las resolvemos
-4. Catálogo de efectos, equipo, clases y enemigos
-5. Motor de combate
+4. Catálogos: efectos, equipo, clases y enemigos
+5. Motor de combate y expedición
 6. Eventos
 7. Diseño de la UI
 
@@ -17,65 +18,67 @@
 
 | Rol GoF | Clase | Paquete |
 |---|---|---|
-| **Component** | `Combatiente` (interfaz) | `dominio` |
-| **ConcreteComponent** | `PersonajeBase` | `dominio` |
-| **Decorator** | `EfectoDecorator` (abstracta) | `dominio.decorador` |
-| **ConcreteDecorator** (temporales) | `VenenoDecorator`, `EscudoDecorator`, `FuriaDecorator`… | `dominio.efectos` |
-| **ConcreteDecorator** (permanentes) | `EspadaDecorator`, `ArmaduraDragonDecorator`… | `dominio.equipo` |
-| **Client** | `MotorCombate`, `GestorEfectos` | `motor` |
+| **Component** | `Combatant` (interfaz) | `domain` |
+| **ConcreteComponent** | `BaseCharacter` | `domain` |
+| **Decorator** | `EffectDecorator` (abstracta) | `domain.decorator` |
+| **ConcreteDecorator** (temporales) | `PoisonDecorator`, `ShieldDecorator`, `RageDecorator`… | `domain.effects` |
+| **ConcreteDecorator** (permanentes) | `SwordDecorator`, `DragonArmorDecorator`… | `domain.equipment` |
+| **Client** | `CombatEngine`, `EffectManager` | `engine` |
 
 ```mermaid
 classDiagram
     direction TB
-    class Combatiente {
+    class Combatant {
         <<interface>>
         +id() String
-        +nombre() String
-        +bando() Bando
+        +name() String
+        +side() Side
         +stats() Stats
-        +vidaActual() int
-        +modificarVida(delta, vidaMaxEfectiva)
-        +modificarDanioSaliente(Danio, ContextoTurno) Danio
-        +recibirDanio(Danio, ContextoTurno) ResultadoDanio
-        +alInfligirDanio(ResultadoDanio, ContextoTurno)
-        +puedeActuar(ContextoTurno) boolean
-        +alIniciarTurno(ContextoTurno)
-        +describirCadena() String
+        +currentHealth() int
+        +changeHealth(delta, effectiveMaxHealth)
+        +modifyOutgoingDamage(Damage, TurnContext) Damage
+        +takeDamage(Damage, TurnContext) DamageResult
+        +onDamageDealt(DamageResult, TurnContext)
+        +canAct(TurnContext) boolean
+        +onTurnStart(TurnContext)
+        +describeChain() String
     }
-    class PersonajeBase {
-        -id, nombre, bando
-        -Stats statsBase
-        -int vida
+    class BaseCharacter {
+        -id, name, side
+        -Stats baseStats
+        -int health
     }
-    class EfectoDecorator {
+    class EffectDecorator {
         <<abstract>>
-        #Combatiente envuelto
-        -String efectoId
-        -Categoria categoria
-        -Duracion duracion
-        -boolean recienAplicado
-        +envuelto() Combatiente
-        +debeRetirarse() boolean
-        +refrescar(EfectoDecorator nuevo)
-        #copiarSobre(Combatiente nuevoEnvuelto)* EfectoDecorator
+        #Combatant wrapped
+        -String effectId
+        -String label
+        -Category category
+        -Duration duration
+        -boolean justApplied
+        +wrapped() Combatant
+        +shouldBeRemoved() boolean
+        +refresh(EffectDecorator incoming)
+        +advanceTurn()
+        #copyOnto(Combatant newWrapped)* EffectDecorator
     }
-    Combatiente <|.. PersonajeBase
-    Combatiente <|.. EfectoDecorator
-    EfectoDecorator o--> Combatiente : envuelto
-    EfectoDecorator <|-- VenenoDecorator
-    EfectoDecorator <|-- EscudoDecorator
-    EfectoDecorator <|-- FuriaDecorator
-    EfectoDecorator <|-- CongeladoDecorator
-    EfectoDecorator <|-- EspadaDecorator
-    EfectoDecorator <|-- ArmaduraDragonDecorator
+    Combatant <|.. BaseCharacter
+    Combatant <|.. EffectDecorator
+    EffectDecorator o--> Combatant : wrapped
+    EffectDecorator <|-- PoisonDecorator
+    EffectDecorator <|-- ShieldDecorator
+    EffectDecorator <|-- RageDecorator
+    EffectDecorator <|-- FrozenDecorator
+    EffectDecorator <|-- SwordDecorator
+    EffectDecorator <|-- DragonArmorDecorator
 ```
 
 Ejemplo de cadena en memoria (afuera → adentro):
 
 ```
-heroe ──► FuriaDecorator ──► VenenoDecorator ──► EspadaDecorator ──► PersonajeBase(Guerrero)
-          (temporal, 2t)     (temporal, 3t)      (equipo, ∞)         (vida, stats base)
-describirCadena() = "Furia(Envenenado(Espada(Guerrero)))"
+hero ──► RageDecorator ──► PoisonDecorator ──► SwordDecorator ──► BaseCharacter(warrior)
+         (temporal, 2t)    (temporal, 3t)      (equipo, ∞)        (vida, stats base)
+describeChain() = "Furia(Envenenado(Espada(Guerrero)))"   ← usa los labels en español (texto visible)
 ```
 
 **Invariante de orden:** el equipo siempre queda **por dentro** de los efectos temporales: se aplica al crear el combate, antes de cualquier efecto, y los efectos nuevos se agregan siempre en la capa exterior.
@@ -87,73 +90,79 @@ describirCadena() = "Furia(Envenenado(Espada(Guerrero)))"
 ### 2.1 Tipos de valor (records)
 
 ```java
-record Stats(int vidaMax, int ataque, int defensa, int velocidad, int critico) // critico = % 0..100
-    // métodos "con": conAtaque(int), conDefensa(int)... devuelven copias
+record Stats(int maxHealth, int attack, int defense, int speed, int critChance) // critChance = % 0..100
+    // withAttack(int), withDefense(int)... return copies
 
-record Danio(int fisico, int elemental, String origenId, boolean critico, boolean reflejable)
-    // fisico: se mitiga con defensa; elemental: NO se mitiga
+record Damage(int physical, int elemental, String sourceId, boolean critical, boolean reflectable)
+    // physical: mitigated by defense; elemental: NOT mitigated
 
-record ResultadoDanio(int recibido, int absorbido, int reflejado, boolean evadido)
-    // recibido = vida realmente perdida; reflejado = daño a devolver al atacante
+record DamageResult(int taken, int absorbed, int reflected, boolean evaded)
+    // taken = health actually lost; reflected = damage to send back to the attacker
 
-enum Bando { HEROE, ENEMIGO }
-enum Categoria { EQUIPO, BUFF, DEBUFF, CONTROL }   // EQUIPO = permanente, no se purga
-record Duracion(int turnos) // PERMANENTE = Integer.MAX_VALUE; decrementar(), expirada()
+enum Side { HERO, ENEMY }
+enum Category { EQUIPMENT, BUFF, DEBUFF, CONTROL }   // EQUIPMENT = permanente, no se purga
+enum DamageType { PHYSICAL, ELEMENTAL, POISON, REFLECTED }
+record Duration(int turns) // PERMANENT = Integer.MAX_VALUE; decrement(), isExpired()
 ```
 
-### 2.2 `Combatiente` — semántica de cada método
+### 2.2 `Combatant` — semántica de cada método
 
-| Método | `PersonajeBase` | `EfectoDecorator` (por defecto) |
+| Método | `BaseCharacter` | `EffectDecorator` (por defecto) |
 |---|---|---|
-| `id()`, `nombre()`, `bando()` | Valores propios | Delega (la identidad es la del base) |
-| `stats()` | `statsBase` | Delega. Los decoradores de stats transforman `envuelto.stats()` |
-| `vidaActual()` | `vida` | Delega |
-| `modificarVida(delta, max)` | `vida = clamp(vida + delta, 0, max)` | Delega. **Ningún decorador lo sobrescribe** |
-| `modificarDanioSaliente(d, ctx)` | Devuelve `d` | Delega |
-| `recibirDanio(d, ctx)` | Resta `d` a la vida y devuelve el resultado | Delega |
-| `alInfligirDanio(r, ctx)` | No hace nada | Delega |
-| `puedeActuar(ctx)` | `true` | Delega |
-| `alIniciarTurno(ctx)` | No hace nada | **Primero su lógica, luego delega** |
-| `describirCadena()` | `nombre` de la clase o enemigo | `etiqueta + "(" + envuelto.describirCadena() + ")"` |
+| `id()`, `name()`, `side()` | Valores propios | Delega (la identidad es la del base) |
+| `stats()` | `baseStats` | Delega. Los decoradores de stats transforman `wrapped.stats()` |
+| `currentHealth()` | `health` | Delega |
+| `changeHealth(delta, max)` | `health = clamp(health + delta, 0, max)` | Delega. **Ningún decorador lo sobrescribe** |
+| `modifyOutgoingDamage(d, ctx)` | Devuelve `d` | Delega |
+| `takeDamage(d, ctx)` | Resta `d` a la vida y devuelve el resultado | Delega |
+| `onDamageDealt(r, ctx)` | No hace nada | Delega |
+| `canAct(ctx)` | `true` | Delega |
+| `onTurnStart(ctx)` | No hace nada | **Primero su lógica, luego delega** |
+| `describeChain()` | `label` de la clase o enemigo | `label + "(" + wrapped.describeChain() + ")"` |
 
-Cada decorador concreto **sobrescribe solo lo que le corresponde** y en todo lo demás delega (lo hereda de `EfectoDecorator`).
+Cada decorador concreto **sobrescribe solo lo que le corresponde** y en todo lo demás delega (lo hereda de `EffectDecorator`).
 
-### 2.3 `ContextoTurno` (interfaz en `dominio`, implementada por `motor`)
+### 2.3 `TurnContext` (interfaz en `domain`, implementada por `engine`)
 
 Los decoradores **no mutan la vida directamente**: piden al contexto que lo haga, y el motor lo resuelve con la **cadena exterior** (ver §3.1).
 
 ```java
-interface ContextoTurno {
-    void emitir(EventoCombate evento);
-    Aleatorio aleatorio();
-    void danioDirecto(String objetivoId, int cantidad, TipoDanio tipo, String fuenteEfectoId); // ignora defensa y escudo
-    void curar(String objetivoId, int cantidad, String fuenteEfectoId);
-    int ronda();
+interface TurnContext {
+    void emit(CombatEvent event);
+    RandomSource random();
+    void directDamage(String targetId, int amount, DamageType type, String sourceEffectId); // ignores defense and shield
+    void heal(String targetId, int amount, String sourceEffectId);
+    int round();
+}
+
+interface RandomSource {
+    int nextInt(int minInclusive, int maxInclusive);
+    boolean chance(int percent);   // true with probability percent/100
 }
 ```
 
-> `ContextoTurno`, `Aleatorio` y `EventoCombate` viven en `dominio` (los decoradores los usan); el `motor` los implementa. Esto respeta la regla `motor → dominio`.
+> `TurnContext`, `RandomSource` y `CombatEvent` viven en `domain` (los decoradores los usan); `engine` e `infrastructure` los implementan. Esto respeta la regla `engine → domain`.
 
-### 2.4 `EfectoDecorator`
+### 2.4 `EffectDecorator`
 
 ```java
-abstract class EfectoDecorator implements Combatiente {
-    protected final Combatiente envuelto;
-    private final String efectoId;       // "veneno", "espada"...
-    private final String etiqueta;       // "Envenenado", "Espada"
-    private final Categoria categoria;
-    private Duracion duracion;
-    private boolean recienAplicado = true;
+public abstract class EffectDecorator implements Combatant {
+    protected final Combatant wrapped;
+    private final String effectId;     // "poison", "sword"...
+    private final String label;        // "Envenenado", "Espada"  (UI text)
+    private final Category category;
+    private Duration duration;
+    private boolean justApplied = true;
 
-    // ... delegación de TODOS los métodos de Combatiente ...
+    // ... delegates EVERY Combatant method to `wrapped` ...
 
-    public Combatiente envuelto();
-    public boolean debeRetirarse()      { return duracion.expirada(); }   // Escudo: || absorcion == 0
-    public void refrescar(EfectoDecorator nuevo) { this.duracion = nuevo.duracion; } // Escudo: suma absorción
-    public void avanzarTurno()           { if (recienAplicado) recienAplicado = false; else duracion = duracion.decrementar(); }
+    public Combatant wrapped();
+    public boolean shouldBeRemoved()            { return duration.isExpired(); }        // Shield: || absorption == 0
+    public void refresh(EffectDecorator incoming) { this.duration = incoming.duration; } // Shield: adds absorption
+    public void advanceTurn() { if (justApplied) justApplied = false; else duration = duration.decrement(); }
 
-    /** Crea una copia de este decorador (con su estado: duración, absorción...) envolviendo a otro combatiente. */
-    protected abstract EfectoDecorator copiarSobre(Combatiente nuevoEnvuelto);
+    /** Copies this decorator (with its state: duration, absorption...) on top of another combatant. */
+    protected abstract EffectDecorator copyOnto(Combatant newWrapped);
 }
 ```
 
@@ -164,34 +173,34 @@ abstract class EfectoDecorator implements Combatiente {
 > Esta sección es **el corazón didáctico** del proyecto. Cada trampa tiene su test (T-108).
 
 ### 3.1 Llamadas a sí mismo (*self-calls*) ignoran los decoradores
-`PersonajeBase` no sabe que está decorado: si dentro de sí mismo usara `this.stats().defensa()`, vería la defensa **sin** la Armadura.
+`BaseCharacter` no sabe que está decorado: si dentro de sí mismo usara `this.stats().defense()`, vería la defensa **sin** la armadura.
 **Solución:** todo cálculo que necesita stats efectivas lo hace **el motor sobre la referencia exterior**:
-- La mitigación por defensa la calcula `MotorCombate` con `objetivo.stats()` **antes** de llamar a `recibirDanio`.
-- La vida máxima efectiva se pasa como parámetro: `modificarVida(delta, exterior.stats().vidaMax())`.
-- Los decoradores curan o dañan vía `ContextoTurno`, que resuelve la cadena exterior por `id`.
+- La mitigación por defensa la calcula `DamageCalculator` con `target.stats()` **antes** de llamar a `takeDamage`.
+- La vida máxima efectiva se pasa como parámetro: `changeHealth(delta, outer.stats().maxHealth())`.
+- Los decoradores curan o dañan vía `TurnContext`, que resuelve la cadena exterior por `id`.
 
 ### 3.2 Quitar un decorador del medio
-Las referencias `envuelto` son `final`; no se puede "desenganchar" una capa.
-**Solución (ADR-002):** `GestorEfectos` **reconstruye** la cadena:
-1. Desenrolla de afuera hacia adentro: `[Furia, Veneno, Espada]` + `base`.
-2. Filtra las capas a retirar → `[Furia, Espada]`.
-3. Reenvuelve de adentro hacia afuera con `copiarSobre`: `base → Espada' → Furia'`.
-4. Devuelve la nueva referencia exterior; `Combate` la reemplaza.
+Las referencias `wrapped` son `final`; no se puede "desenganchar" una capa.
+**Solución (ADR-002):** `EffectManager` **reconstruye** la cadena:
+1. Desenrolla de afuera hacia adentro: `[Rage, Poison, Sword]` + `base`.
+2. Filtra las capas a retirar → `[Rage, Sword]`.
+3. Reenvuelve de adentro hacia afuera con `copyOnto`: `base → Sword' → Rage'`.
+4. Devuelve la nueva referencia exterior; `Combat` la reemplaza.
 
-El `PersonajeBase` es **la misma instancia**, así que la vida se conserva. Las capas copiadas conservan su estado (turnos, absorción).
+El `BaseCharacter` es **la misma instancia**, así que la vida se conserva. Las capas copiadas conservan su estado (turnos, absorción).
 
 ### 3.3 `instanceof` deja de funcionar
-`heroe instanceof CongeladoDecorator` solo ve la capa exterior.
-**Solución:** `GestorEfectos.tieneEfecto(c, "congelado")` y `GestorEfectos.capas(c)` recorren la cadena. Nadie fuera de `GestorEfectos` hace `instanceof` sobre decoradores.
+`hero instanceof FrozenDecorator` solo ve la capa exterior.
+**Solución:** `EffectManager.hasEffect(c, "frozen")` y `EffectManager.layers(c)` recorren la cadena. Nadie fuera de `EffectManager` hace `instanceof` sobre decoradores.
 
 ### 3.4 El orden importa
-`Furia(Espada(base))`: ataque = (14 + 6) × 1.5 = **30**.
-`Espada(Furia(base))`: ataque = 14 × 1.5 + 6 = **27**.
+`Rage(Sword(base))`: attack = (14 + 6) × 1.5 = **30**.
+`Sword(Rage(base))`: attack = 14 × 1.5 + 6 = **27**.
 **Solución:** el orden lo fija la invariante del §1 (equipo dentro, efectos fuera, en orden de aplicación). El inspector muestra las **stats en cada capa** para que se vea.
 
 ### 3.5 Duplicados
-Aplicar dos veces Veneno crearía `Veneno(Veneno(...))` y doble daño.
-**Solución:** `GestorEfectos.aplicar` busca el `efectoId` en la cadena; si ya existe, llama a `refrescar` (RF-16) y emite `EFECTO_REFRESCADO`.
+Aplicar dos veces Poison crearía `Poison(Poison(...))` y doble daño.
+**Solución:** `EffectManager.apply` busca el `effectId` en la cadena; si ya existe, llama a `refresh` (RF-16) y emite `EFFECT_REFRESHED`.
 
 ### 3.6 Identidad
 `equals`/`id` entre capas: todas las capas devuelven el `id()` del base. Los repositorios y el contexto buscan por `id`, nunca por referencia.
@@ -200,233 +209,236 @@ Aplicar dos veces Veneno crearía `Veneno(Veneno(...))` y doble daño.
 
 ## 4. Catálogos
 
-### 4.1 Fórmulas
-- **Daño bruto:** `round(atacante.stats().ataque() × multiplicador)`. Atacar normal: multiplicador 1.0.
-- **Crítico:** con probabilidad `critico %` → bruto × 1.5 (redondeo hacia abajo).
-- **Danio saliente:** `atacante.modificarDanioSaliente(new Danio(bruto, 0, …))` (el AnilloFuego suma elemental aquí).
-- **Evasión:** probabilidad `min(25, objetivo.velocidad × 2) %` → evento `EVASION`, sin daño.
-- **Mitigación:** `fisico' = max(1, fisico − objetivo.stats().defensa() / 2)`; `elemental` no se mitiga.
-- Luego `objetivo.recibirDanio(danioMitigado)` → `ResultadoDanio`.
-- Si `reflejado > 0` → `ctx.danioDirecto(atacante, reflejado, REFLEJADO)`; el daño reflejado **no** se vuelve a reflejar.
-- Finalmente `atacante.alInfligirDanio(resultado)` (Vampirismo).
+### 4.1 Fórmulas (`DamageCalculator`)
+- **Daño bruto:** `round(attacker.stats().attack() × multiplier)`. Ataque normal: multiplicador 1.0.
+- **Crítico:** con probabilidad `critChance %` → bruto × 1.5 (redondeo hacia abajo).
+- **Daño saliente:** `attacker.modifyOutgoingDamage(new Damage(raw, 0, …))` (el FireRing suma elemental aquí).
+- **Evasión:** probabilidad `min(25, target.speed × 2) %` → evento `EVADED`, sin daño.
+- **Mitigación:** `physical' = max(1, physical − target.stats().defense() / 2)`; `elemental` no se mitiga.
+- Luego `target.takeDamage(mitigated)` → `DamageResult`.
+- Si `reflected > 0` → `ctx.directDamage(attacker, reflected, REFLECTED)`; el daño reflejado **no** se vuelve a reflejar.
+- Finalmente `attacker.onDamageDealt(result)` (Lifesteal).
 - Todos los porcentajes se redondean hacia abajo; los efectos que curan o dañan lo hacen con un mínimo de 1 si su base es > 0.
 
-### 4.2 Efectos temporales (`CatalogoEfectos`)
+### 4.2 Efectos temporales (`EffectCatalog`)
 
-| id | Etiqueta | Categoría | Duración | Comportamiento (método sobrescrito) |
+| id | label (UI) | Category | Duración | Comportamiento (método sobrescrito) |
 |---|---|---|---|---|
-| `veneno` | Envenenado | DEBUFF | 3 | `alIniciarTurno`: `danioDirecto(6, VENENO)` |
-| `regeneracion` | Regeneración | BUFF | 3 | `alIniciarTurno`: `curar(8)` |
-| `escudo` | Escudo | BUFF | 3 | `recibirDanio`: absorbe hasta `absorcion` (20) y delega el resto. Se retira si `absorcion == 0` |
-| `espinas` | Espinas | BUFF | 3 | `recibirDanio`: delega y pone `reflejado = 30 %` de `recibido` (si `danio.reflejable`) |
-| `furia` | Furia | BUFF | 2 | `stats()`: ataque × 1.5, defensa × 0.7 |
-| `defensa` | En guardia | BUFF | 1 | `stats()`: defensa × 1.5 |
-| `congelado` | Congelado | CONTROL | 1 | `puedeActuar()`: `false` (no delega) |
-| `vampirismo` | Vampirismo | BUFF | 3 | `alInfligirDanio`: `curar(30 % de recibido)` |
+| `poison` | Envenenado | DEBUFF | 3 | `onTurnStart`: `directDamage(6, POISON)` |
+| `regeneration` | Regeneración | BUFF | 3 | `onTurnStart`: `heal(8)` |
+| `shield` | Escudo | BUFF | 3 | `takeDamage`: absorbe hasta `absorption` (20) y delega el resto. Se retira si `absorption == 0` |
+| `thorns` | Espinas | BUFF | 3 | `takeDamage`: delega y pone `reflected = 30 %` de `taken` (si `damage.reflectable`) |
+| `rage` | Furia | BUFF | 2 | `stats()`: attack × 1.5, defense × 0.7 |
+| `guard` | En guardia | BUFF | 1 | `stats()`: defense × 1.5 |
+| `frozen` | Congelado | CONTROL | 1 | `canAct()`: `false` (no delega) |
+| `lifesteal` | Vampirismo | BUFF | 3 | `onDamageDealt`: `heal(30 % de taken)` |
 
-**Silencio** **no es un decorador**: es una **operación sobre la cadena** (`GestorEfectos.purgar`) que retira todas las capas con categoría ≠ `EQUIPO`. Es un buen ejemplo de qué *no* modelar como decorador.
+**Silence** **no es un decorador**: es una **operación sobre la cadena** (`EffectManager.purge`) que retira todas las capas con categoría ≠ `EQUIPMENT`. Es un buen ejemplo de qué *no* modelar como decorador.
 
 ### 4.3 Reaplicación (RF-16)
 - Por defecto: la duración se **resetea** al valor del nuevo efecto.
-- `escudo`: suma la absorción (`min(40, actual + 20)`) y resetea la duración.
+- `shield`: suma la absorción (`min(40, current + 20)`) y resetea la duración.
 
-### 4.4 Reglas de interacción (`ReglasInteraccion`, RF-17)
+### 4.4 Reglas de interacción (`InteractionRules`, RF-17)
 Se evalúan **antes** de aplicar el efecto nuevo:
 
 | Al aplicar | Se retira | Motivo |
 |---|---|---|
-| `congelado` | `furia` | No se puede estar furioso congelado |
-| `furia` | `defensa` | La furia rompe la guardia |
-| `veneno` | `regeneracion` | Se anulan |
-| `regeneracion` | `veneno` | Se anulan |
+| `frozen` | `rage` | No se puede estar furioso congelado |
+| `rage` | `guard` | La furia rompe la guardia |
+| `poison` | `regeneration` | Se anulan |
+| `regeneration` | `poison` | Se anulan |
 
 Las reglas son **datos** (una tabla `Map<String, Set<String>>`), no `if` dispersos: agregar una regla no toca el motor (RNF-03).
 
-### 4.5 Duración y "recién aplicado"
+### 4.5 Duración y `justApplied`
 - La duración cuenta **turnos del combatiente afectado**.
-- `GestorEfectos.avanzarTurno(c)` se llama al **final del turno** del afectado: decrementa la duración de cada capa y luego retira las que `debeRetirarse()`.
-- Un efecto aplicado **durante el propio turno del afectado** (p. ej., Furia sobre uno mismo) no decrementa ese turno (`recienAplicado`), así dura N turnos completos.
-- Ejemplo: Veneno (3) aplicado por el enemigo → el héroe recibe daño al inicio de sus 3 turnos siguientes y luego se retira.
+- `EffectManager.advanceTurn(c)` se llama al **final del turno** del afectado: decrementa la duración de cada capa y luego retira las que `shouldBeRemoved()`.
+- Un efecto aplicado **durante el propio turno del afectado** (p. ej., Rage sobre uno mismo) no decrementa ese turno (`justApplied`), así dura N turnos completos.
+- Ejemplo: Poison (3) aplicado por el enemigo → el héroe recibe daño al inicio de sus 3 turnos siguientes y luego se retira.
 
-### 4.6 Equipo (`CatalogoEquipo`) — decoradores permanentes
+### 4.6 Equipo (`EquipmentCatalog`) — decoradores permanentes
 
-| id | Nombre | Ranura | Efecto |
+| id | name (UI) | Slot | Efecto |
 |---|---|---|---|
-| `espada` | Espada | ARMA | ataque +6 |
-| `hacha` | Hacha de guerra | ARMA | ataque +10, velocidad −3 |
-| `baston` | Bastón rúnico | ARMA | ataque +3, crítico +15 |
-| `armadura_cuero` | Armadura de cuero | ARMADURA | defensa +4 |
-| `armadura_dragon` | Armadura de dragón | ARMADURA | defensa +10, velocidad −4 |
-| `anillo_fuego` | Anillo de fuego | ACCESORIO | `modificarDanioSaliente`: elemental +4 |
-| `amuleto_vida` | Amuleto de vida | ACCESORIO | vidaMax +25 |
-| `botas_viento` | Botas de viento | ACCESORIO | velocidad +5 |
+| `sword` | Espada | WEAPON | attack +6 |
+| `war_axe` | Hacha de guerra | WEAPON | attack +10, speed −3 |
+| `rune_staff` | Bastón rúnico | WEAPON | attack +3, critChance +15 |
+| `leather_armor` | Armadura de cuero | ARMOR | defense +4 |
+| `dragon_armor` | Armadura de dragón | ARMOR | defense +10, speed −4 |
+| `fire_ring` | Anillo de fuego | ACCESSORY | `modifyOutgoingDamage`: elemental +4 |
+| `life_amulet` | Amuleto de vida | ACCESSORY | maxHealth +25 |
+| `wind_boots` | Botas de viento | ACCESSORY | speed +5 |
 
-Máximo una pieza por ranura (RF-03). Las stats nunca bajan de 0 (crítico tope 100).
+Máximo una pieza por slot (RF-02). Las stats nunca bajan de 0 (critChance tope 100).
 
-### 4.7 Clases de héroe (`CatalogoClases`)
+### 4.7 Clases de héroe (`HeroClassCatalog`)
 
-| Clase | Vida | Atq | Def | Vel | Crít | Habilidad 1 | Habilidad 2 |
-|---|---|---|---|---|---|---|---|
-| Guerrero | 120 | 14 | 8 | 4 | 10 | **Grito de guerra**: Furia a sí mismo (cd 3) | **Muro de escudos**: Escudo a sí mismo (cd 3) |
-| Mago | 80 | 18 | 4 | 6 | 10 | **Rayo de hielo**: daño ×0.8 + Congelado al rival (cd 4) | **Silencio arcano**: purga al rival (cd 4) |
-| Arquero | 95 | 15 | 5 | 10 | 20 | **Flecha envenenada**: daño ×0.7 + Veneno al rival (cd 3) | **Flecha vampírica**: Vampirismo a sí mismo + daño ×1.0 (cd 4) |
+| id | name (UI) | HP | Atk | Def | Spd | Crit | Habilidad 1 | Habilidad 2 |
+|---|---|---|---|---|---|---|---|---|
+| `warrior` | Guerrero | 120 | 14 | 8 | 4 | 10 | `war_cry` "Grito de guerra": rage a sí mismo (cd 3) | `shield_wall` "Muro de escudos": shield a sí mismo (cd 3) |
+| `mage` | Mago | 80 | 18 | 4 | 6 | 10 | `ice_bolt` "Rayo de hielo": daño ×0.8 + frozen al rival (cd 4) | `arcane_silence` "Silencio arcano": purga al rival (cd 4) |
+| `archer` | Arquero | 95 | 15 | 5 | 10 | 20 | `poison_arrow` "Flecha envenenada": daño ×0.7 + poison al rival (cd 3) | `vampiric_arrow` "Flecha vampírica": lifesteal a sí mismo + daño ×1.0 (cd 4) |
 
 ```java
-record Habilidad(String id, String nombre, String descripcion, int enfriamiento,
-                 double multiplicadorDanio,              // 0 = no ataca
-                 List<AplicacionEfecto> efectos,         // (efectoId, Objetivo.PROPIO | RIVAL)
-                 boolean purgaRival)                     // Silencio
+record Ability(String id, String name, String description, int cooldown,
+               double damageMultiplier,                // 0 = does not attack
+               List<EffectApplication> effects,        // (effectId, Target.SELF | OPPONENT)
+               boolean purgesOpponent)                 // silence
 ```
 Orden de resolución de una habilidad: 1) efectos sobre uno mismo, 2) daño (si el multiplicador es > 0), 3) efectos sobre el rival (solo si el golpe no fue evadido), 4) purga.
 
-### 4.8 Enemigos (`CatalogoEnemigos`) e IA
+### 4.8 Enemigos (`EnemyCatalog`) e IA
 
-| Nivel | Enemigo | Vida | Atq | Def | Vel | Crít | Habilidades (en orden de prioridad) |
-|---|---|---|---|---|---|---|---|
-| 1 | Goblin | 70 | 11 | 3 | 8 | 10 | **Daga sucia**: daño ×0.8 + Veneno al rival (cd 3; 50 % de probabilidad si está lista) |
-| 1 | Lobo | 60 | 12 | 2 | 12 | 15 | **Aullido**: Furia propia (cd 4; si vida < 60 %) |
-| 1 | Slime | 90 | 8 | 4 | 2 | 0 | **Gelatina**: Escudo propio (cd 4) · **Ácido**: daño ×0.5 + Veneno (cd 3) |
-| 2 | Esqueleto | 100 | 13 | 7 | 3 | 5 | **Reensamblar**: Regeneración propia (cd 5; si vida < 50 %) · **Huesos afilados**: Espinas propias (cd 4) |
-| 2 | Orco chamán | 110 | 14 | 6 | 5 | 10 | **Maldición**: purga al rival (cd 5; si el rival tiene ≥ 2 efectos BUFF) · **Tótem de sangre**: Vampirismo propio (cd 4) |
-| 3 | Golem de piedra | 160 | 15 | 14 | 1 | 0 | **Piel de piedra**: Espinas propias (cd 4) · **Pisotón**: daño ×1.0 + Congelado (cd 5) |
-| 3 | Bruja | 90 | 16 | 4 | 7 | 15 | **Pócima**: Regeneración propia (cd 4; si vida < 50 %) · **Hechizo gélido**: Congelado al rival (cd 4) · **Maleficio**: Veneno al rival (cd 3) |
-| 4 (jefe) | Dragón | 200 | 17 | 9 | 5 | 10 | **Escamas**: Escudo propio (cd 5; si vida < 40 %) · **Aliento helado**: daño ×0.6 + Congelado (cd 5) · **Rugido**: Furia propia (cd 4) |
+| Nivel | id | name (UI) | HP | Atk | Def | Spd | Crit | Habilidades (en orden de prioridad) |
+|---|---|---|---|---|---|---|---|---|
+| 1 | `goblin` | Goblin | 70 | 11 | 3 | 8 | 10 | `dirty_dagger` "Daga sucia": daño ×0.8 + poison al rival (cd 3; 50 % de probabilidad si está lista) |
+| 1 | `wolf` | Lobo | 60 | 12 | 2 | 12 | 15 | `howl` "Aullido": rage propia (cd 4; si HP < 60 %) |
+| 1 | `slime` | Slime | 90 | 8 | 4 | 2 | 0 | `jelly_shield` "Gelatina": shield propio (cd 4) · `acid_spit` "Ácido": daño ×0.5 + poison (cd 3) |
+| 2 | `skeleton` | Esqueleto | 100 | 13 | 7 | 3 | 5 | `reassemble` "Reensamblar": regeneration propia (cd 5; si HP < 50 %) · `sharp_bones` "Huesos afilados": thorns propias (cd 4) |
+| 2 | `orc_shaman` | Orco chamán | 110 | 14 | 6 | 5 | 10 | `curse` "Maldición": purga al rival (cd 5; si el rival tiene ≥ 2 efectos BUFF) · `blood_totem` "Tótem de sangre": lifesteal propio (cd 4) |
+| 3 | `stone_golem` | Golem de piedra | 160 | 15 | 14 | 1 | 0 | `stone_skin` "Piel de piedra": thorns propias (cd 4) · `stomp` "Pisotón": daño ×1.0 + frozen (cd 5) |
+| 3 | `witch` | Bruja | 90 | 16 | 4 | 7 | 15 | `potion` "Pócima": regeneration propia (cd 4; si HP < 50 %) · `frost_hex` "Hechizo gélido": frozen al rival (cd 4) · `hex` "Maleficio": poison al rival (cd 3) |
+| 4 (jefe) | `dragon` | Dragón | 200 | 17 | 9 | 5 | 10 | `scales` "Escamas": shield propio (cd 5; si HP < 40 %) · `frost_breath` "Aliento helado": daño ×0.6 + frozen (cd 5) · `roar` "Rugido": rage propia (cd 4) |
 
 Cada enemigo **demuestra decoradores distintos**, así la expedición recorre todo el catálogo de efectos.
 
-**IA (`IaEnemigo`):** recorre las habilidades en orden de prioridad; usa la primera que tenga enfriamiento 0 **y** cumpla su condición. Si ninguna aplica → `Atacar`. Determinista salvo por las probabilidades, que usan `Aleatorio`.
+**IA (`EnemyAI`):** recorre las habilidades en orden de prioridad; usa la primera que tenga cooldown 0 **y** cumpla su condición. Si ninguna aplica → `Attack`. Determinista salvo por las probabilidades, que usan `RandomSource`.
 
 ---
 
-## 5. Motor de combate
+## 5. Motor de combate y expedición
 
-### 5.1 Agregado `Combate`
+### 5.1 Agregado `Combat`
 ```
-Combate { id, semilla, estado, ronda,
-          Combatiente heroe, Combatiente enemigo,            // referencias EXTERIORES
-          Map<String,Integer> enfriamientosHeroe, enfriamientosEnemigo,
-          List<EventoCombate> log, int secuenciaEventos }
+Combat { id, status, round,
+         Combatant hero, Combatant enemy,                  // OUTER references
+         Map<String,Integer> heroCooldowns, enemyCooldowns,
+         List<CombatEvent> log, int eventSequence }
 ```
-Toda mutación de un combate ocurre dentro de `synchronized (combate)`.
+Toda mutación ocurre dentro de `synchronized` sobre la expedición dueña del combate.
 
 ### 5.2 Acciones
 ```java
-sealed interface Accion permits Atacar, Defender, UsarHabilidad, Pasar {}
+sealed interface Action permits Attack, Defend, UseAbility, Pass {}
 ```
-- `Defender` → aplica `defensa` a sí mismo.
-- `Pasar` → solo es válida si el héroe **no** puede actuar (Congelado); la UI la ofrece en ese caso.
-- Validaciones → `AccionInvalidaException` (habilidad inexistente, en enfriamiento, combate terminado).
+- `Defend` → aplica `guard` a sí mismo.
+- `Pass` → solo es válida si el héroe **no** puede actuar (frozen); la UI la ofrece en ese caso.
+- Validaciones → `InvalidActionException` con su código de error (habilidad inexistente, en cooldown, combate terminado).
 
-### 5.3 Algoritmo de una ronda (`MotorCombate.ejecutarRonda`)
+### 5.3 Algoritmo de una ronda (`CombatEngine.executeRound`)
 ```
-ejecutarRonda(combate, accionHeroe):
-    validar(combate, accionHeroe)
-    turno(HEROE, accionHeroe)
-    si enemigo.vida == 0 → terminar(VICTORIA); return
-    turno(ENEMIGO, ia.decidir(combate))
-    si heroe.vida == 0 → terminar(DERROTA); return
-    combate.ronda++
+executeRound(combat, heroAction):
+    validate(combat, heroAction)
+    takeTurn(HERO, heroAction)
+    if enemy.health == 0 → finish(VICTORY); return
+    takeTurn(ENEMY, ai.decide(combat))
+    if hero.health == 0 → finish(DEFEAT); return
+    combat.round++
 
-turno(actor, accion):
-    emitir TURNO_INICIADO
-    decrementar enfriamientos > 0 del actor
-    actor.alIniciarTurno(ctx)                 # Veneno, Regeneración
-    si actor.vida == 0 → emitir MUERTE; return
-    si !actor.puedeActuar(ctx) → emitir TURNO_PERDIDO
-    sino → resolver(accion)                   # §4.1 y §4.7; pone el enfriamiento de la habilidad usada
-    actor = gestor.avanzarTurno(actor)        # duraciones; retira expirados → EFECTO_RETIRADO
-    emitir TURNO_TERMINADO
+takeTurn(actor, action):
+    emit TURN_STARTED
+    decrement actor cooldowns > 0
+    actor.onTurnStart(ctx)                    # poison, regeneration
+    if actor.health == 0 → emit DEATH; return
+    if !actor.canAct(ctx) → emit TURN_SKIPPED
+    else → resolve(action)                    # §4.1 and §4.7; sets the used ability's cooldown
+    actor = effectManager.advanceTurn(actor)  # durations; removes expired → EFFECT_REMOVED
+    emit TURN_ENDED
 ```
-> La referencia exterior del actor **puede cambiar** durante el turno (al aplicar o retirar capas): el motor siempre relee `combate.heroe()` / `combate.enemigo()` después de cada operación del gestor.
+> La referencia exterior del actor **puede cambiar** durante el turno (al aplicar o retirar capas): el motor siempre relee `combat.hero()` / `combat.enemy()` después de cada operación del gestor.
 
-### 5.4 `GestorEfectos` — API
+### 5.4 `EffectManager` — API
 
 ```java
-Combatiente aplicar(Combatiente exterior, String efectoId, ContextoTurno ctx);   // reglas → refrescar o envolver
-Combatiente retirar(Combatiente exterior, Predicate<EfectoDecorator> filtro, MotivoRetiro motivo, ContextoTurno ctx);
-Combatiente avanzarTurno(Combatiente exterior, ContextoTurno ctx);              // decrementa + retira (EXPIRADO/AGOTADO)
-Combatiente purgar(Combatiente exterior, ContextoTurno ctx);                    // Silencio
-Combatiente equipar(Combatiente base, List<String> equipoIds);                  // solo al crear
-boolean tieneEfecto(Combatiente exterior, String efectoId);
-List<Capa> capas(Combatiente exterior);   // afuera → adentro, con stats efectivas en cada capa
+Combatant apply(Combatant outer, String effectId, TurnContext ctx);                    // rules → refresh or wrap
+Combatant remove(Combatant outer, Predicate<EffectDecorator> filter, RemovalReason reason, TurnContext ctx);
+Combatant advanceTurn(Combatant outer, TurnContext ctx);                               // decrement + remove (EXPIRED/DEPLETED)
+Combatant purge(Combatant outer, TurnContext ctx);                                     // silence
+Combatant equip(BaseCharacter base, Collection<String> equipmentIds);                  // only when an encounter starts
+boolean hasEffect(Combatant outer, String effectId);
+List<Layer> layers(Combatant outer);   // outer → inner, with effective stats at each layer
 ```
 
-### 5.5 Expedición (`Expedicion`, `ServicioExpedicion`)
+### 5.5 Expedición (`Expedition`, `ExpeditionService`)
 
 ```
-Expedicion { id, semilla, claseId, estado: EN_CURSO | ESPERANDO_RECOMPENSA | COMPLETADA | FRACASADA,
-             nivelActual (1..4), List<String> enemigosPorNivel,     // sorteados al crear
-             PersonajeBase heroeBase,                               // la MISMA instancia en todos los encuentros
-             Map<Ranura, String> equipo,                            // piezas actuales
-             Combate combateActual, List<String> recompensasOfrecidas,
-             Estadisticas estadisticas }                            // vencidos, rondas, daño infligido y recibido
+Expedition { id, seed, heroClassId,
+             status: IN_PROGRESS | AWAITING_REWARD | COMPLETED | FAILED,
+             currentLevel (1..4), List<String> enemyIdsByLevel,     // drawn at creation
+             BaseCharacter heroBase,                                // SAME instance across all encounters
+             Map<Slot, String> equipment,                           // current pieces
+             Combat currentCombat, List<String> offeredRewards,
+             RunStatistics statistics }                             // defeated, rounds, damage dealt and taken
 ```
 
 Ciclo de vida:
 ```
-crear(claseId, equipoInicialId, semilla?)
-   → sortea los enemigos de cada nivel con Aleatorio(semilla)
-   → heroeBase = PersonajeBase(clase); vida = vidaMax efectiva con el equipo
-   → iniciarEncuentro(1)
+create(heroClassId, startingItemId, seed?)
+   → EnemyDraw picks one enemy per level with RandomSource(seed)
+   → heroBase = new BaseCharacter(heroClass); health = effective maxHealth with equipment
+   → startEncounter(1)
 
-iniciarEncuentro(n):
-   heroe   = gestor.equipar(heroeBase, equipo)      # cadena NUEVA: solo equipo, sin efectos
-   enemigo = PersonajeBase(enemigosPorNivel[n])
-   combateActual = new Combate(heroe, enemigo)
+startEncounter(n):
+   hero  = effectManager.equip(heroBase, equipment.values())   # NEW chain: equipment only, no effects
+   enemy = new BaseCharacter(enemyIdsByLevel[n])
+   currentCombat = new Combat(hero, enemy)
 
-al terminar combateActual:
-   DERROTA  → estado = FRACASADA
-   VICTORIA y n == 4 → estado = COMPLETADA
-   VICTORIA y n < 4  → curar 30 % de la vidaMax efectiva (RF-24)
-                       recompensasOfrecidas = 3 piezas al azar, distintas, no equipadas
-                       estado = ESPERANDO_RECOMPENSA
+when currentCombat ends:
+   DEFEAT              → status = FAILED
+   VICTORY and n == 4  → status = COMPLETED
+   VICTORY and n < 4   → heal 30 % of effective maxHealth (RF-24)
+                         offeredRewards = RewardDraw: 3 random, distinct, not equipped
+                         status = AWAITING_REWARD
 
-elegirRecompensa(piezaId | null):
-   si piezaId → equipo[ranura(pieza)] = piezaId     # reemplaza
-   nivelActual++ ; iniciarEncuentro(nivelActual) ; estado = EN_CURSO
+chooseReward(itemId | null):
+   if itemId → equipment[slot(item)] = itemId       # replaces
+   currentLevel++ ; startEncounter(currentLevel) ; status = IN_PROGRESS
 ```
 
-> **Por qué así se purgan los efectos (RF-24):** al iniciar cada encuentro se **reconstruye la cadena desde el `PersonajeBase`** solo con el equipo. Los efectos temporales del encuentro anterior simplemente no se vuelven a envolver. El base (y por tanto la vida) es la misma instancia.
+> **Por qué así se purgan los efectos (RF-24):** al iniciar cada encuentro se **reconstruye la cadena desde el `BaseCharacter`** solo con el equipo. Los efectos temporales del encuentro anterior simplemente no se vuelven a envolver. El base (y por tanto la vida) es la misma instancia.
 
 ---
 
-## 6. Eventos (`EventoCombate`, sealed)
+## 6. Eventos (`CombatEvent`, sealed)
 
-Todo evento tiene `seq` (incremental por combate), `ronda` y `tipo`. Campos específicos:
+Todo evento tiene `seq` (incremental por combate), `round` y `type`. Campos específicos:
 
-| tipo | Campos | Animación en la UI |
+| type | Campos | Animación en la UI |
 |---|---|---|
-| `TURNO_INICIADO` | `actorId` | Resalta la tarjeta del actor |
-| `ACCION` | `actorId`, `accion`, `habilidadId?` | Texto "¡Grito de guerra!" sobre el actor |
-| `DANIO` | `objetivoId`, `cantidad`, `tipoDanio` (FISICO, ELEMENTAL, VENENO, REFLEJADO), `critico` | Número rojo flotante + sacudida (morado si es veneno, naranja si es elemental) |
-| `EVASION` | `objetivoId` | Texto "¡Esquivó!" + desplazamiento lateral |
-| `ABSORBIDO` | `objetivoId`, `cantidad`, `restante` | Número azul + destello del escudo |
-| `CURACION` | `objetivoId`, `cantidad`, `fuente` | Número verde flotante |
-| `EFECTO_APLICADO` | `objetivoId`, `efectoId`, `duracion` | El ícono entra a la lista con *pop*; capa nueva en el inspector |
-| `EFECTO_REFRESCADO` | `objetivoId`, `efectoId`, `duracion` | El ícono pulsa |
-| `EFECTO_RETIRADO` | `objetivoId`, `efectoId`, `motivo` (EXPIRADO, AGOTADO, PURGADO, INTERACCION) | El ícono se desvanece; la capa sale del inspector |
-| `TURNO_PERDIDO` | `actorId`, `efectoId` | Overlay de hielo + aviso |
-| `MUERTE` | `combatienteId` | Retrato en gris, se cae |
-| `TURNO_TERMINADO` | `actorId` | — |
-| `COMBATE_TERMINADO` | `resultado` (VICTORIA, DERROTA) | Banner de victoria o derrota; luego transición a Recompensa o Resumen |
+| `TURN_STARTED` | `actorId` | Resalta la tarjeta del actor |
+| `ACTION` | `actorId`, `action`, `abilityId?` | Texto "¡Grito de guerra!" sobre el actor |
+| `DAMAGE` | `targetId`, `amount`, `damageType` (PHYSICAL, ELEMENTAL, POISON, REFLECTED), `critical` | Número rojo flotante + sacudida (morado si es veneno, naranja si es elemental) |
+| `EVADED` | `targetId` | Texto "¡Esquivó!" + desplazamiento lateral |
+| `ABSORBED` | `targetId`, `amount`, `remaining` | Número azul + destello del escudo |
+| `HEAL` | `targetId`, `amount`, `sourceEffectId` | Número verde flotante |
+| `EFFECT_APPLIED` | `targetId`, `effectId`, `duration` | El ícono entra a la lista con *pop*; capa nueva en el inspector |
+| `EFFECT_REFRESHED` | `targetId`, `effectId`, `duration` | El ícono pulsa |
+| `EFFECT_REMOVED` | `targetId`, `effectId`, `reason` (EXPIRED, DEPLETED, PURGED, INTERACTION) | El ícono se desvanece; la capa sale del inspector |
+| `TURN_SKIPPED` | `actorId`, `effectId` | Overlay de hielo + aviso |
+| `DEATH` | `combatantId` | Retrato en gris, se cae |
+| `TURN_ENDED` | `actorId` | — |
+| `COMBAT_ENDED` | `result` (VICTORY, DEFEAT) | Banner de victoria o derrota; luego transición a Reward o Summary |
 
 ---
 
 ## 7. Diseño de la UI
 
+> Nombres de componentes y archivos en inglés; **textos en pantalla en español**.
+
 ### 7.1 Pantallas y navegación
 ```
-[Selección de clase] ─► [Preparación: pieza inicial] ─► [Mapa expedición] ─► [Arena] ─┬─ victoria ─► [Recompensa] ─► [Mapa] ─► ...
-                                                                                       └─ derrota / jefe vencido ─► [Resumen]
-[Resumen] ── "Nueva expedición" ─► [Selección de clase]
+[ClassSelect] ─► [Loadout: pieza inicial] ─► [Map] ─► [Arena] ─┬─ victoria ─► [Reward] ─► [Map] ─► ...
+                                                               └─ derrota / jefe vencido ─► [Summary]
+[Summary] ── "Nueva expedición" ─► [ClassSelect]
 ```
-Navegación por estado en Zustand (`pantalla`), sin router. La pantalla se **deriva** del `estado` de la expedición que devuelve el backend:
-`EN_CURSO` → Arena · `ESPERANDO_RECOMPENSA` → Recompensa · `COMPLETADA` / `FRACASADA` → Resumen.
+Navegación por estado en Zustand (`screen`), sin router. La pantalla se **deriva** del `status` de la expedición que devuelve el backend:
+`IN_PROGRESS` → Arena (o Map si el combate aún no empezó, `round == 1` sin eventos) · `AWAITING_REWARD` → Reward · `COMPLETED` / `FAILED` → Summary.
 
-### 7.2 Selección de clase
+### 7.2 `ClassSelectScreen`
 Tres tarjetas de clase: retrato, stats en barras y las 2 habilidades con su descripción.
 
-### 7.2.b Mapa de la expedición
+### 7.2.b `MapScreen`
 ```
   [1 Goblin ✔] ─── [2 ???] ─── [3 ???] ─── [4 🐉 Dragón]
                      ▲ estás aquí
@@ -434,14 +446,14 @@ Tres tarjetas de clase: retrato, stats en barras y las 2 habilidades con su desc
 ```
 Los niveles vencidos muestran el enemigo con ✔; el siguiente se revela al llegar a él.
 
-### 7.2.c Recompensa
-Tres tarjetas de pieza (ranura, bonus). Al pasar el mouse por una: **vista previa** de la cadena y las stats resultantes (`POST /api/vista-previa`), resaltando la pieza que se reemplazaría. Botones "Elegir" y "Omitir".
+### 7.2.c `RewardScreen`
+Tres tarjetas de pieza (slot, bonus). Al pasar el mouse por una: **vista previa** de la cadena y las stats resultantes (`POST /api/preview`), resaltando la pieza que se reemplazaría. Botones "Elegir" y "Omitir".
 
-### 7.2.d Resumen
-Resultado (COMPLETADA / FRACASADA), enemigos vencidos, rondas, daño infligido y recibido, y la cadena final de equipo. Botón "Nueva expedición".
+### 7.2.d `SummaryScreen`
+Resultado (COMPLETED / FAILED), enemigos vencidos, rondas, daño infligido y recibido, y la cadena final de equipo. Botón "Nueva expedición".
 
-### 7.3 Preparación (pieza inicial)
-Se elige **1 pieza** (RF-02); el mismo componente de inventario se reutiliza en la pantalla de Recompensa.
+### 7.3 `LoadoutScreen` (pieza inicial)
+Se elige **1 pieza** (RF-02); el componente `Inventory` se reutiliza en `RewardScreen`.
 ```
 ┌─────────────────────────────┬─────────────────────────────────────┐
 │  INVENTARIO (arrastrables)  │      [ retrato del héroe ]          │
@@ -451,10 +463,10 @@ Se elige **1 pieza** (RF-02); el mismo componente de inventario se reutiliza en 
 │  👢 Botas                   │   Cadena: Espada(Guerrero)          │
 └─────────────────────────────┴─────────────────────────────────────┘
 ```
-- dnd-kit: solo se puede soltar en la ranura correcta (la ranura se ilumina en verde o rojo).
-- Cada cambio llama a `POST /api/vista-previa` (con *debounce* de 200 ms) → stats y cadena calculadas por el backend (RF-03).
+- dnd-kit: solo se puede soltar en el slot correcto (se ilumina en verde o rojo).
+- Cada cambio llama a `POST /api/preview` (con *debounce* de 200 ms) → stats y cadena calculadas por el backend (RF-03).
 
-### 7.4 Arena (pantalla principal)
+### 7.4 `ArenaScreen` (pantalla principal)
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
 │ Nivel 2/4 · Esqueleto · Ronda 3                         [⚙ inspector] │
@@ -466,7 +478,7 @@ Se elige **1 pieza** (RF-02); el mismo componente de inventario se reutiliza en 
 ├────────────────────────────┴─────────────────────────────────────────┤
 │  INSPECTOR DE CADENA (héroe)          │  LOG DE COMBATE              │
 │  ┌ Furia        BUFF  2t  Atq 30 ┐    │  R3 Guerrero usa Grito…      │
-│  │┌ Envenenado DEBUFF 1t  Atq 20 ┐│   │  R3 Dragón recibe 21 (crít)  │
+│  │┌ Envenenado DEBUFF 1t  Atq 20 ┐│   │  R3 Esqueleto recibe 21 (crít)│
 │  ││┌ Espada     EQUIPO ∞ Atq 20 ┐││   │  R3 Escudo absorbe 8         │
 │  │││ Guerrero (base)   Atq 14  │││   │  ...                         │
 │  Furia(Envenenado(Espada(Guerrero)))  │                              │
@@ -474,21 +486,21 @@ Se elige **1 pieza** (RF-02); el mismo componente de inventario se reutiliza en 
 │ [⚔ Atacar] [🛡 Defender] [Grito de guerra (cd 2)] [Muro de escudos]   │
 └──────────────────────────────────────────────────────────────────────┘
 ```
-- **InspectorCadena** (★ RF-20): cajas anidadas (afuera → adentro) con categoría, turnos y stats **en esa capa**; las capas entran y salen animadas con `AnimatePresence`. Pestañas Héroe / Enemigo.
-- **PanelAcciones**: deshabilitado mientras se reproducen los eventos o si el combate terminó. Habilidades en enfriamiento: gris con el número de turnos. Si el héroe está Congelado: solo "Pasar turno".
+- **`ChainInspector`** (★ RF-20): cajas anidadas (afuera → adentro) con categoría, turnos y stats **en esa capa**; las capas entran y salen animadas con `AnimatePresence`. Pestañas Héroe / Enemigo.
+- **`ActionPanel`**: deshabilitado mientras se reproducen los eventos o si el combate terminó. Habilidades en cooldown: gris con el número de turnos. Si el héroe está frozen: solo "Pasar turno".
 - En móvil: columnas apiladas; el inspector y el log van en pestañas.
 
 ### 7.5 Estilo visual
-- Tema oscuro de "fantasía": tokens en `tokens.css` (`--fondo`, `--panel`, `--borde`, `--texto`, `--vida`, `--danio`, `--curacion`, `--escudo`, `--veneno`, `--hielo`, `--fuego`, `--equipo`, `--buff`, `--debuff`, `--control`).
-- Color por categoría de efecto: EQUIPO gris-dorado, BUFF verde, DEBUFF morado, CONTROL celeste.
+- Tema oscuro de "fantasía": tokens en `styles/tokens.css` (`--color-bg`, `--color-panel`, `--color-border`, `--color-text`, `--color-health`, `--color-damage`, `--color-heal`, `--color-shield`, `--color-poison`, `--color-frost`, `--color-fire`, `--color-equipment`, `--color-buff`, `--color-debuff`, `--color-control`).
+- Color por categoría de efecto: EQUIPMENT gris-dorado, BUFF verde, DEBUFF morado, CONTROL celeste.
 - Tipografía: una serif de fantasía para títulos (Google Fonts, p. ej. *Cinzel*) y una sans para datos.
 
 ### 7.6 Animación
-- `reproductorEventos` consume la cola en orden, unos 600 ms por evento (Daño o Curación: 700 ms; TURNO_INICIADO: 300 ms).
+- `eventPlayer` consume la cola en orden, unos 600 ms por evento (DAMAGE o HEAL: 700 ms; TURN_STARTED: 300 ms).
 - Botón "⏩ Rápido" (×3) y respeto de `prefers-reduced-motion` (sin sacudidas ni desplazamientos; solo cambios de opacidad).
-- Al vaciarse la cola se pinta el `combate` final recibido del servidor.
+- Al vaciarse la cola se pinta la `expedition` final recibida del servidor.
 
 ### 7.7 Accesibilidad
 - Barras de vida con `role="progressbar"` y `aria-valuenow`.
-- El log es una región `aria-live="polite"`.
+- `CombatLog` es una región `aria-live="polite"`.
 - Se puede jugar solo con teclado: `1` Atacar, `2` Defender, `3`/`4` Habilidades.

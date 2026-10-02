@@ -5,7 +5,9 @@ Caso de estudio del **patrón Decorator** aplicado a un combate RPG por turnos.
 - **Backend:** Java puro (JDK 25, sin frameworks). El patrón Decorator se implementa a mano.
 - **Frontend:** React + Vite + TypeScript, interactivo y animado.
 
-Cada efecto (Veneno, Escudo, Furia, Congelado…) y cada pieza de equipo es un **decorador** que envuelve al personaje.
+Cada efecto (`PoisonDecorator`, `ShieldDecorator`, `RageDecorator`, `FrozenDecorator`…) y cada pieza de equipo es un **decorador** que envuelve al personaje.
+
+> 🗣️ **Código 100 % en inglés**; specs y textos del juego en español (ADR-004).
 La UI muestra en vivo la pila de decoradores: `Furia(Envenenado(Espada(Guerrero)))`.
 
 ---
@@ -17,13 +19,14 @@ Patron-decorator/
 ├── README.md               ← estás aquí
 ├── AGENTS.md               ← reglas de trabajo para agentes (LEER PRIMERO)
 ├── CLAUDE.md               ← puntero a AGENTS.md para Claude Code
-├── .claude/agents/         ← subagentes por rol: rpg-dominio, rpg-motor, rpg-api, rpg-frontend, rpg-qa
+├── .claude/agents/         ← subagentes por rol: rpg-domain, rpg-engine, rpg-api, rpg-frontend, rpg-qa
 ├── specs/                  ← fuente de verdad (spec-driven)
 │   ├── requirements.md     ← QUÉ: requisitos funcionales y criterios de aceptación
 │   ├── architecture.md     ← CÓMO a nivel macro: capas, módulos, carpetas, stack
 │   ├── design.md           ← CÓMO en detalle: decoradores, motor, reglas, UI
 │   ├── api-contract.md     ← contrato HTTP/JSON entre back y front
 │   ├── tasks.md            ← plan de trabajo: tareas, dependencias, estado
+│   ├── glossary.md         ← término en español → nombre en código (inglés)
 │   ├── open-questions.md   ← supuestos y dudas pendientes
 │   └── adr/                ← decisiones de arquitectura registradas
 ├── backend/                ← Java puro + Maven (solo carpetas; el código empieza en T-001)
@@ -42,7 +45,7 @@ requirements.md ──► architecture.md / design.md / api-contract.md ──�
         └──────────────── open-questions.md (si la spec no alcanza) ◄──────────────────┘
 ```
 
-0. Para arrancar con agentes en Claude Code: *"Usa el agente rpg-dominio para hacer T-101"* (ver `specs/tasks.md`, sección de paralelismo).
+0. Para arrancar con agentes en Claude Code: *"Usa el agente rpg-domain para hacer T-101"* (ver `specs/tasks.md`, sección de paralelismo).
 1. Nada se implementa si no está en una spec.
 2. Cada tarea de `tasks.md` referencia los requisitos (`RF-xx`) que cumple.
 3. Si el código necesita algo que la spec no dice, **se actualiza la spec primero**.

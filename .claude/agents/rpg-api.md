@@ -7,12 +7,13 @@ Eres el agente de API del proyecto RPG Decorator.
 
 Antes de empezar lee: AGENTS.md, specs/tasks.md (tu tarea), specs/api-contract.md completo, specs/architecture.md §2 y ADR-001/ADR-003.
 
-Zona de archivos: backend/src/main/java/com/rpgdecorator/api/**, .../infraestructura/**, App.java y sus tests.
+Zona de archivos: backend/src/main/java/com/rpgdecorator/api/**, .../infrastructure/**, App.java y sus tests.
 
 Reglas:
+- TODO el código en inglés (ADR-004): clases, métodos, variables, comentarios, tests y commits. Solo los textos visibles para el jugador van en español.
 - Prohibido Jackson, Gson, Spring o cualquier librería: HttpServer del JDK + api/json propio.
 - El JSON producido debe coincidir con los ejemplos del contrato (nombres, enums, campos omitidos).
-- Los handlers solo traducen HTTP ↔ ServicioExpedicion; nada de lógica de juego aquí.
+- Los handlers solo traducen HTTP ↔ ExpeditionService; nada de lógica de juego aquí.
 - Los errores siguen api-contract §1.
 - Tests de integración con java.net.http.HttpClient y un puerto libre.
 - Si el contrato no alcanza, escribe en specs/open-questions.md (no cambies el contrato tú).

@@ -1,17 +1,18 @@
 # Tareas — RPG Decorator
 
 > Plan de trabajo para los agentes. Lee `AGENTS.md §2` antes de tomar una tarea.
+> **Todo el código en inglés** (ADR-004); los nombres de clases y archivos de abajo son los definitivos.
 >
 > **Estados:** `[ ]` Pendiente · `[~]` En curso (agente) · `[x]` Hecha · `[!]` Bloqueada
 > **⚡** = se puede hacer en paralelo con las otras ⚡ de su fase una vez cumplidas las dependencias.
-> **Agentes:** `ORQ` orquestador · `DOM` dominio · `MOT` motor · `API` api · `FE` frontend · `QA` calidad
+> **Agentes:** `ORQ` orquestador · `DOM` dominio · `ENG` motor · `API` api · `FE` frontend · `QA` calidad
 
 ---
 
 ## Grafo de fases
 
 ```
-F0 Setup ──► F1 Dominio ──► F2 Motor ──► F3 API ──┐
+F0 Setup ──► F1 Domain ──► F2 Engine ──► F3 API ──┐
    │                                              ├──► F5 Integración y QA
    └──────► F4 Frontend (con mocks) ──────────────┘
 ```
@@ -24,7 +25,7 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
 ### T-001 [ ] Esqueleto del backend · `ORQ`
 - **Depende de:** —
 - **Specs:** architecture §2.1, §2.2, ADR-001
-- **Hacer:** `backend/pom.xml` (groupId `com.rpgdecorator`, Java 25, JUnit 5 en scope test, surefire, exec-maven-plugin con `mainClass=com.rpgdecorator.App`, jar ejecutable `rpg-decorator.jar`). El árbol de paquetes **ya existe** con `.gitkeep`: reemplázalos por un `package-info.java` que documente cada paquete. `App.java` que imprime "RPG Decorator" y termina.
+- **Hacer:** `backend/pom.xml` (groupId `com.rpgdecorator`, artifactId `rpg-decorator`, Java 25, JUnit 5 en scope test, surefire, exec-maven-plugin con `mainClass=com.rpgdecorator.App`, jar ejecutable `rpg-decorator.jar`). El árbol de paquetes **ya existe** con `.gitkeep`: reemplázalos por un `package-info.java` (Javadoc en inglés) en cada paquete. `App.java` que imprime "RPG Decorator" y termina.
 - **Aceptación:**
   - `mvn -q test` pasa (con un test de humo).
   - `pom.xml` no tiene dependencias fuera de scope `test`.
@@ -32,7 +33,7 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
 ### T-002 [ ] Esqueleto del frontend · `FE` ⚡
 - **Depende de:** —
 - **Specs:** architecture §3
-- **Hacer:** Vite + React + TS strict; Tailwind 4, Framer Motion (`motion`), Zustand, TanStack Query, dnd-kit, lucide-react, sonner, ESLint + Prettier. Proxy `/api → http://localhost:8080` en `vite.config.ts`. Las carpetas de architecture §3.1 **ya existen** con `.gitkeep`: genera el proyecto Vite en una carpeta temporal y copia sus archivos a `frontend/` sin borrarlas. `tokens.css` con las variables de design §7.5 (solo los nombres y unos valores iniciales).
+- **Hacer:** Vite + React + TS strict; Tailwind 4, Framer Motion (`motion`), Zustand, TanStack Query, dnd-kit, lucide-react, sonner, ESLint + Prettier. Proxy `/api → http://localhost:8080` en `vite.config.ts`. Las carpetas de architecture §3.1 **ya existen** con `.gitkeep`: genera el proyecto Vite en una carpeta temporal y copia sus archivos a `frontend/` sin borrarlas. `styles/tokens.css` con las variables de design §7.5.
 - **Aceptación:** `npm run dev` muestra "RPG Decorator"; `npm run build` y `npm run lint` pasan.
 
 ### T-003 [ ] Raíz del repo · `ORQ` ⚡
@@ -42,226 +43,235 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
 
 ---
 
-## F1 — Dominio (el patrón Decorator)
+## F1 — Domain (el patrón Decorator) · paquete `com.rpgdecorator.domain`
 
 ### T-101 [ ] Tipos de valor · `DOM`
 - **Depende de:** T-001
 - **Specs:** design §2.1 · RNF-02
-- **Hacer:** `Stats` (con métodos `con…` y límites ≥ 0, crítico ≤ 100), `Danio`, `ResultadoDanio`, `TipoDanio`, `Bando`, `Categoria`, `Duracion` (PERMANENTE, `decrementar`, `expirada`).
-- **Aceptación:** tests de `Stats` (inmutabilidad, límites) y de `Duracion` (permanente nunca expira; 1 → 0 expira).
+- **Hacer:** `Stats` (métodos `with…` y límites ≥ 0, `critChance` ≤ 100), `Damage`, `DamageResult`, `DamageType`, `Side`, `decorator/Category`, `decorator/Duration` (`PERMANENT`, `decrement`, `isExpired`).
+- **Aceptación:** tests de `Stats` (inmutabilidad, límites) y de `Duration` (`PERMANENT` nunca expira; 1 → 0 expira).
 
-### T-102 [ ] Contratos: `Combatiente`, `ContextoTurno`, `Aleatorio`, eventos · `DOM`
+### T-102 [ ] Contratos: `Combatant`, `TurnContext`, `RandomSource`, eventos · `DOM`
 - **Depende de:** T-101
 - **Specs:** design §2.2, §2.3, §6
-- **Hacer:** interfaz `Combatiente`; interfaz `ContextoTurno`; interfaz `Aleatorio` (`entero(min, max)`, `probabilidad(int porcentaje)`); `EventoCombate` como `sealed interface` con un `record` por tipo de design §6.
-- **Aceptación:** compila; `switch` exhaustivo sobre `EventoCombate` sin `default` (un test lo demuestra).
+- **Hacer:** interfaces `Combatant`, `TurnContext`, `RandomSource`; `event/CombatEvent` como `sealed interface` con un `record` por tipo de design §6 (`TurnStarted`, `ActionTaken`, `DamageDealt`, `Evaded`, `Absorbed`, `Healed`, `EffectApplied`, `EffectRefreshed`, `EffectRemoved`, `TurnSkipped`, `Death`, `TurnEnded`, `CombatEnded`).
+- **Aceptación:** compila; un `switch` exhaustivo sobre `CombatEvent` sin `default` (un test lo demuestra).
 
-### T-103 [ ] `PersonajeBase` (Componente concreto) · `DOM`
+### T-103 [ ] `BaseCharacter` (Componente concreto) · `DOM`
 - **Depende de:** T-102
-- **Specs:** design §2.2 (columna PersonajeBase), §3.1
+- **Specs:** design §2.2 (columna BaseCharacter), §3.1
 - **Aceptación:**
-  - `modificarVida` respeta `[0, vidaMaxEfectiva]`.
-  - `recibirDanio` resta `fisico + elemental` y devuelve un `ResultadoDanio` correcto.
-  - `describirCadena()` devuelve el nombre.
+  - `changeHealth` respeta `[0, effectiveMaxHealth]`.
+  - `takeDamage` resta `physical + elemental` y devuelve un `DamageResult` correcto.
+  - `describeChain()` devuelve el label.
 
-### T-104 [ ] `EfectoDecorator` (Decorador base) · `DOM`
+### T-104 [ ] `EffectDecorator` (Decorador base) · `DOM`
 - **Depende de:** T-103
 - **Specs:** design §2.4, §3.6 · RNF-02
-- **Hacer:** clase abstracta que **delega todos** los métodos; `envuelto()`, `debeRetirarse()`, `refrescar()`, `avanzarTurno()` con `recienAplicado`, `copiarSobre()` abstracto, `describirCadena()`.
+- **Hacer:** clase abstracta que **delega todos** los métodos; `wrapped()`, `shouldBeRemoved()`, `refresh()`, `advanceTurn()` con `justApplied`, `copyOnto()` abstracto, `describeChain()`.
 - **Aceptación:**
   - Un decorador de prueba "vacío" (en tests) es indistinguible del base en todos los métodos.
   - `id()` es el del base en cualquier profundidad.
-  - `avanzarTurno()`: el primer llamado no decrementa; los siguientes sí.
+  - `advanceTurn()`: el primer llamado no decrementa; los siguientes sí.
 
-### T-105 [ ] Decoradores de equipo · `DOM` ⚡
+### T-105 [ ] Decoradores de equipo (`domain.equipment`) · `DOM` ⚡
 - **Depende de:** T-104
 - **Specs:** design §4.6
-- **Hacer:** los 8 decoradores de `dominio/equipo`.
-- **Aceptación:** un test por pieza; un test de orden `Furia(Espada(base))` ≠ `Espada(Furia(base))` (design §3.4) **cuando exista Furia** (puede usar un decorador de prueba ×1.5).
+- **Hacer:** `SwordDecorator`, `WarAxeDecorator`, `RuneStaffDecorator`, `LeatherArmorDecorator`, `DragonArmorDecorator`, `FireRingDecorator`, `LifeAmuletDecorator`, `WindBootsDecorator`.
+- **Aceptación:** un test por pieza; un test de orden `Rage(Sword(base))` ≠ `Sword(Rage(base))` (design §3.4); si `RageDecorator` aún no existe, puede usar un decorador de prueba ×1.5.
 
-### T-106a [ ] Efectos: Veneno y Regeneración · `DOM` ⚡
+### T-106a [ ] Efectos: `PoisonDecorator` y `RegenerationDecorator` · `DOM` ⚡
 - **Depende de:** T-104
 - **Specs:** design §4.2 · RF-12
-- **Aceptación:** al llamar `alIniciarTurno`, piden `danioDirecto` o `curar` al contexto (usar un `ContextoTurno` falso en el test) y luego delegan.
+- **Aceptación:** al llamar `onTurnStart`, piden `directDamage` o `heal` al contexto (con un `TurnContext` falso en el test) y luego delegan.
 
-### T-106b [ ] Efectos: Escudo y Espinas · `DOM` ⚡
+### T-106b [ ] Efectos: `ShieldDecorator` y `ThornsDecorator` · `DOM` ⚡
 - **Depende de:** T-104
 - **Specs:** design §4.2, §4.3 · RF-14, RF-16
 - **Aceptación:**
-  - Escudo 20 vs 30 de daño → absorbe 20, delega 10, `debeRetirarse() = true`.
-  - Escudo `refrescar` suma la absorción con tope 40.
-  - Espinas: `reflejado = 30 %` de `recibido`; 0 si `danio.reflejable == false`.
-  - Escudo(Espinas(base)): el reflejo se calcula sobre lo que **pasó** el escudo.
+  - Shield 20 vs 30 de daño → absorbe 20, delega 10, `shouldBeRemoved() == true`.
+  - `refresh` del shield suma la absorción con tope 40.
+  - Thorns: `reflected = 30 %` de `taken`; 0 si `damage.reflectable == false`.
+  - `Shield(Thorns(base))`: el reflejo se calcula sobre lo que **pasó** el escudo.
 
-### T-106c [ ] Efectos: Furia, Defensa y Congelado · `DOM` ⚡
+### T-106c [ ] Efectos: `RageDecorator`, `GuardDecorator` y `FrozenDecorator` · `DOM` ⚡
 - **Depende de:** T-104
 - **Specs:** design §4.2 · RF-13, RF-15
-- **Aceptación:** stats modificadas con redondeo hacia abajo; `Congelado.puedeActuar() == false` sin importar las capas internas.
+- **Aceptación:** stats modificadas con redondeo hacia abajo; `FrozenDecorator.canAct() == false` sin importar las capas internas.
 
-### T-106d [ ] Efecto: Vampirismo · `DOM` ⚡
+### T-106d [ ] Efecto: `LifestealDecorator` · `DOM` ⚡
 - **Depende de:** T-104
 - **Specs:** design §4.2
-- **Aceptación:** `alInfligirDanio` con `recibido = 20` → `curar(6)`; con `recibido = 0` → no cura.
+- **Aceptación:** `onDamageDealt` con `taken = 20` → `heal(6)`; con `taken = 0` → no cura.
 
-### T-107 [ ] Catálogos · `DOM`
+### T-107 [ ] Catálogos (`domain.catalog`) · `DOM`
 - **Depende de:** T-105, T-106a–d
 - **Specs:** design §4.2, §4.6, §4.7, §4.8 · RF-01, RF-04
-- **Hacer:** `CatalogoEfectos`, `CatalogoEquipo` (con `Ranura`), `CatalogoClases`, `CatalogoEnemigos` (8 enemigos + grupos por nivel), `Habilidad`, `AplicacionEfecto`, `DefinicionEnemigo` (con condiciones de IA como `Predicate`).
-- **Aceptación:** los valores coinciden **exactamente** con las tablas de design (test que recorre cada catálogo); ids únicos; cada nivel 1–3 tiene ≥ 2 enemigos.
+- **Hacer:** `EffectCatalog`, `EquipmentCatalog` (con `Slot`), `HeroClassCatalog`, `EnemyCatalog` (8 enemigos + grupos por nivel), `Ability`, `EffectApplication`, `Target`, `EnemyDefinition` (con condiciones de IA como `Predicate`).
+- **Aceptación:** los valores coinciden **exactamente** con las tablas de design (un test recorre cada catálogo); ids únicos; cada nivel 1–3 tiene ≥ 2 enemigos.
 
 ### T-108 [ ] Tests didácticos de las "trampas del Decorator" · `DOM`
 - **Depende de:** T-107
 - **Specs:** design §3
-- **Aceptación:** un test por trampa (§3.1–§3.6) con un nombre que la explique, p. ej. `selfCallEnBaseNoVeLaArmadura()`. Cada test lleva un comentario de 2–3 líneas de por qué existe.
+- **Aceptación:** un test por trampa (§3.1–§3.6) en `DecoratorPitfallsTest`, con nombres que la expliquen, p. ej. `selfCallInBaseIgnoresArmor()`, `removingMiddleLayerKeepsOuterState()`. Cada test lleva un comentario de 2–3 líneas (en inglés) de por qué existe.
 
 ---
 
-## F2 — Motor
+## F2 — Engine · paquete `com.rpgdecorator.engine`
 
-### T-201 [ ] `GestorEfectos` + `ReglasInteraccion` · `MOT`
+### T-201 [ ] `EffectManager` + `InteractionRules` · `ENG`
 - **Depende de:** T-107
 - **Specs:** design §3.2, §3.3, §3.5, §4.4, §4.5, §5.4 · RF-10, RF-11, RF-16, RF-17, RF-18 · ADR-002
+- **Hacer:** `engine/effects/EffectManager`, `InteractionRules`, `Layer`, `RemovalReason`.
 - **Aceptación:**
-  - `retirar` del medio: `Furia(Veneno(Espada(base)))` sin Veneno → `Furia(Espada(base))`, Furia conserva sus turnos y el base es **la misma instancia**.
-  - `aplicar` dos veces → una sola capa + `EFECTO_REFRESCADO`.
+  - `remove` del medio: `Rage(Poison(Sword(base)))` sin Poison → `Rage(Sword(base))`, Rage conserva sus turnos y el base es **la misma instancia**.
+  - `apply` dos veces → una sola capa + `EFFECT_REFRESHED`.
   - Reglas de §4.4 (un test por fila).
-  - `purgar` deja solo el equipo.
-  - `avanzarTurno`: ciclo completo de Veneno (3 turnos) y de un efecto `recienAplicado`.
-  - `capas()` devuelve las stats efectivas por capa.
-  - `equipar` respeta la invariante del orden (equipo por dentro).
+  - `purge` deja solo el equipo.
+  - `advanceTurn`: ciclo completo de Poison (3 turnos) y de un efecto `justApplied`.
+  - `layers()` devuelve las stats efectivas por capa.
+  - `equip` respeta la invariante del orden (equipo por dentro).
 
-### T-202 [ ] `CalculadoraDanio` · `MOT` ⚡
+### T-202 [ ] `DamageCalculator` · `ENG` ⚡
 - **Depende de:** T-107
 - **Specs:** design §4.1
-- **Aceptación:** tests con un `Aleatorio` fijo: crítico, evasión (tope 25 %), mitigación mínima 1, elemental sin mitigar.
+- **Aceptación:** tests con un `RandomSource` fijo: crítico, evasión (tope 25 %), mitigación mínima 1, elemental sin mitigar.
 
-### T-203 [ ] `Combate`, `Accion`, `ContextoTurnoImpl` · `MOT`
+### T-203 [ ] `Combat`, `Action`, `TurnContextImpl` · `ENG`
 - **Depende de:** T-201
 - **Specs:** design §5.1, §5.2, §2.3
-- **Aceptación:** `ContextoTurnoImpl.danioDirecto` y `curar` resuelven la **cadena exterior** por id y usan su `vidaMax` efectiva (test con AmuletoVida: curar puede superar la vida máxima base).
+- **Hacer:** `engine/combat/Combat`, `CombatStatus`, `Action` (sealed: `Attack`, `Defend`, `UseAbility`, `Pass`), `TurnContextImpl`, `InvalidActionException`.
+- **Aceptación:** `TurnContextImpl.directDamage` y `heal` resuelven la **cadena exterior** por id y usan su `maxHealth` efectiva (test con LifeAmulet: curar puede superar la vida máxima base).
 
-### T-204 [ ] `MotorCombate.ejecutarRonda` · `MOT`
+### T-204 [ ] `CombatEngine.executeRound` · `ENG`
 - **Depende de:** T-202, T-203
 - **Specs:** design §5.3, §4.7 · RF-05–RF-09, RF-15
 - **Aceptación:**
   - Orden de eventos de una ronda exactamente como §5.3.
-  - Veneno puede matar al inicio del turno → no actúa.
-  - Congelado → `TURNO_PERDIDO`; `PASAR` solo es válido congelado.
-  - Enfriamientos (cd 3: se usa en el turno 1 → disponible en el turno 4).
+  - Poison puede matar al inicio del turno → no actúa.
+  - Frozen → `TURN_SKIPPED`; `Pass` solo es válido frozen.
+  - Cooldowns (cd 3: se usa en el turno 1 → disponible en el turno 4).
   - El orden de resolución de habilidades de §4.7; los efectos sobre el rival no se aplican si hubo evasión.
-  - `VICTORIA` / `DERROTA` + `COMBATE_TERMINADO`; acción posterior → `AccionInvalidaException`.
+  - `VICTORY` / `DEFEAT` + `COMBAT_ENDED`; acción posterior → `InvalidActionException`.
 
-### T-205 [ ] `IaEnemigo` · `MOT` ⚡
+### T-205 [ ] `EnemyAI` · `ENG` ⚡
 - **Depende de:** T-203
 - **Specs:** design §4.8
-- **Aceptación:** por cada enemigo, un test que fuerza la condición de cada habilidad y verifica la elección; sin habilidades disponibles → `Atacar`.
+- **Aceptación:** por cada enemigo, un test que fuerza la condición de cada habilidad y verifica la elección; sin habilidades disponibles → `Attack`.
 
-### T-206 [ ] Expedición: agregado y sorteos · `MOT`
+### T-206 [ ] Expedición: agregado y sorteos · `ENG`
 - **Depende de:** T-204, T-205
 - **Specs:** design §5.5 · RF-02, RF-04, RF-24–RF-27
-- **Hacer:** `Expedicion`, `EstadoExpedicion`, `SorteoEnemigos`, `SorteoRecompensas`, `Estadisticas`, `RepositorioExpediciones` (interfaz).
+- **Hacer:** `engine/expedition/Expedition`, `ExpeditionStatus`, `EnemyDraw`, `RewardDraw`, `RunStatistics`, `engine/ExpeditionRepository` (interfaz).
 - **Aceptación:**
   - Misma semilla → mismos enemigos y mismas recompensas.
-  - Enemigos de cada nivel de su grupo correcto; nivel 4 siempre Dragón.
+  - Enemigos de cada nivel de su grupo correcto; nivel 4 siempre `dragon`.
   - Recompensas: 3 distintas, ninguna ya equipada.
 
-### T-207 [ ] `ServicioExpedicion` · `MOT`
+### T-207 [ ] `ExpeditionService` · `ENG`
 - **Depende de:** T-206
 - **Specs:** design §5.5 · RF-24, RF-25, RF-26
-- **Hacer:** `crear`, `actuar`, `elegirRecompensa`, `vistaPrevia` (ambas formas de api-contract §4), `obtener`, `eliminar`. Sincronización por expedición.
+- **Hacer:** `create`, `act`, `chooseReward`, `preview` (las dos formas de api-contract §4), `get`, `delete`. Sincronización por expedición.
 - **Aceptación:**
   - Escenario Gherkin "Pasar al siguiente nivel…" de requirements §5.
-  - Reemplazo de pieza en una ranura ocupada.
-  - Las transiciones inválidas lanzan una excepción con su código (`ESTADO_INVALIDO`, etc.).
+  - Reemplazo de pieza en un slot ocupado.
+  - Las transiciones inválidas lanzan una excepción con su código (`INVALID_STATE`, etc.).
   - Las estadísticas se acumulan entre encuentros.
 
 ---
 
-## F3 — API (HTTP + JSON a mano)
+## F3 — API (HTTP + JSON a mano) · paquete `com.rpgdecorator.api`
 
 ### T-301 [ ] JSON mínimo · `API` ⚡
 - **Depende de:** T-001
 - **Specs:** architecture §2.2 · RNF-01
-- **Hacer:** `JsonValor` (sealed) + `Json.escribir(JsonValor)` + `Json.parsear(String)`. Escapes `\" \\ \n \t \uXXXX`, números enteros y decimales, anidación.
-- **Aceptación:** tests ida y vuelta; un JSON inválido lanza `JsonInvalidoException` con su posición; caracteres con tilde y ñ se escriben y leen bien.
+- **Hacer:** `api/json/JsonValue` (sealed) + `Json.write(JsonValue)` + `Json.parse(String)` + `InvalidJsonException`. Escapes `\" \\ \n \t \uXXXX`, números enteros y decimales, anidación.
+- **Aceptación:** tests ida y vuelta; un JSON inválido lanza `InvalidJsonException` con su posición; las tildes y la ñ se escriben y leen bien.
 
 ### T-302 [ ] Servidor, router, CORS y errores · `API` ⚡
 - **Depende de:** T-001
 - **Specs:** api-contract §1, §8
-- **Hacer:** `Servidor` (HttpServer en :8080, puerto configurable con la variable `PORT`), `Router` con parámetros de ruta (`/api/expediciones/{id}`), `Cors`, `ErrorHttp`, y `/api/salud`.
-- **Aceptación:** test de integración con `HttpClient`: 200 en salud, 404 en una ruta desconocida, 405 en un método incorrecto, 204 en `OPTIONS` con cabeceras CORS.
+- **Hacer:** `HttpApiServer` (HttpServer en :8080, puerto configurable con la variable `PORT`), `Router` con parámetros de ruta (`/api/expeditions/{id}`), `Cors`, `HttpError`, y `/api/health`.
+- **Aceptación:** test de integración con `HttpClient`: 200 en health, 404 en una ruta desconocida, 405 en un método incorrecto, 204 en `OPTIONS` con cabeceras CORS.
 
 ### T-303 [ ] DTOs y mappers · `API`
 - **Depende de:** T-207, T-301
 - **Specs:** api-contract §3–§7
-- **Aceptación:** test por DTO que compara el JSON generado con el ejemplo del contrato (estructura y nombres de campos); los eventos omiten los campos que no aplican.
+- **Hacer:** `api/dto/*` (records con los nombres del contrato: `HeroClassDTO`, `ExpeditionDTO`, `CombatantDTO`, `LayerDTO`, `EventDTO`…) y `api/mapper/*`.
+- **Aceptación:** un test por DTO que compara el JSON generado con el ejemplo del contrato (estructura y nombres de campos); los eventos omiten los campos que no aplican.
 
 ### T-304 [ ] Endpoints de catálogo y vista previa · `API`
 - **Depende de:** T-302, T-303
 - **Specs:** api-contract §2, §3, §4
-- **Aceptación:** tests de integración de los 4 GET de catálogo y de las 2 formas de vista previa.
+- **Hacer:** `CatalogHandler`, `PreviewHandler`.
+- **Aceptación:** tests de integración de los 4 GET de catálogo y de las 2 formas de preview.
 
 ### T-305 [ ] Endpoints de expedición · `API`
 - **Depende de:** T-304
 - **Specs:** api-contract §2, §5, §6, §7
-- **Aceptación:** test de integración que juega una expedición completa por HTTP con una semilla fija (bucle de `ATACAR` + elegir siempre la primera recompensa) hasta `COMPLETADA` o `FRACASADA`; casos de error 400, 404 y 409 cubiertos.
+- **Hacer:** `ExpeditionHandler`.
+- **Aceptación:** test de integración que juega una expedición completa por HTTP con una semilla fija (bucle de `ATTACK` + elegir siempre la primera recompensa) hasta `COMPLETED` o `FAILED`; casos de error 400, 404 y 409 cubiertos.
 
 ### T-306 [ ] `App` + infraestructura · `API`
 - **Depende de:** T-305
-- **Hacer:** `RepositorioExpedicionesMemoria`, `AleatorioJdk`, armado de dependencias en `App.main`, log de arranque con la URL.
-- **Aceptación:** `mvn -q exec:java` arranca; `curl localhost:8080/api/salud` responde `{"estado":"OK"}`.
+- **Hacer:** `infrastructure/InMemoryExpeditionRepository`, `infrastructure/JdkRandomSource`, armado de dependencias en `App.main`, log de arranque con la URL.
+- **Aceptación:** `mvn -q exec:java` arranca; `curl localhost:8080/api/health` responde `{"status":"OK"}`.
 
 ---
 
-## F4 — Frontend
+## F4 — Frontend · `frontend/src`
 
 ### T-401 [ ] Tipos y cliente HTTP · `FE`
 - **Depende de:** T-002
 - **Specs:** api-contract (completo)
-- **Hacer:** `api/tipos.ts` (1:1 con el contrato, uniones discriminadas para `EventoDTO` por `tipo`), `api/cliente.ts` (fetch tipado; un error del backend → `ErrorApi` con su `codigo`), `api/consultas.ts` (hooks de TanStack Query).
-- **Aceptación:** `tsc` sin errores; un `switch` sobre `evento.tipo` es exhaustivo (`never`).
+- **Hacer:** `api/types.ts` (1:1 con el contrato, uniones discriminadas para `EventDTO` por `type`), `api/client.ts` (fetch tipado; un error del backend → `ApiError` con su `code`), `api/queries.ts` (hooks de TanStack Query).
+- **Aceptación:** `tsc` sin errores; un `switch` sobre `event.type` es exhaustivo (`never`).
 
 ### T-402 [ ] Mocks · `FE`
 - **Depende de:** T-401
-- **Hacer:** `mocks/` con fixtures JSON del contrato y un cliente mock que simula: crear expedición, unas cuantas rondas con eventos variados (daño, crítico, escudo, veneno, congelado, retiro), victoria → recompensa → nivel 2. Se activa con `VITE_USE_MOCKS=true`.
-- **Aceptación:** con mocks se puede recorrer Selección → Preparación → Mapa → Arena → Recompensa → Mapa sin backend.
+- **Hacer:** `mocks/` con fixtures JSON del contrato y un cliente mock que simula: crear expedición, unas cuantas rondas con eventos variados (daño, crítico, shield, poison, frozen, retiro), victoria → recompensa → nivel 2. Se activa con `VITE_USE_MOCKS=true`.
+- **Aceptación:** con mocks se recorre ClassSelect → Loadout → Map → Arena → Reward → Map sin backend.
 
 ### T-403 [ ] Store y tema · `FE` ⚡
 - **Depende de:** T-401
 - **Specs:** architecture §3.3, design §7.1, §7.5
-- **Hacer:** `juegoStore` (pantalla derivada del estado, selección, cola de eventos, velocidad de animación); `tokens.css` completo y componentes `ui/` (Boton, Panel, Tooltip, Insignia).
-- **Aceptación:** la pantalla cambia sola según `expedicion.estado`; el contraste del texto es ≥ 4.5:1.
+- **Hacer:** `store/gameStore.ts` (pantalla derivada del estado, selección, cola de eventos, velocidad de animación); `styles/tokens.css` completo y `components/ui/` (`Button`, `Panel`, `Tooltip`, `Badge`).
+- **Aceptación:** la pantalla cambia sola según `expedition.status`; el contraste del texto es ≥ 4.5:1.
 
-### T-404 [ ] Selección de clase · `FE` ⚡
+### T-404 [ ] `ClassSelectScreen` · `FE` ⚡
 - **Depende de:** T-403
 - **Specs:** design §7.2 · RF-01
 
-### T-405 [ ] Preparación: inventario con drag & drop + vista previa · `FE` ⚡
+### T-405 [ ] `LoadoutScreen`: `Inventory` con drag & drop + vista previa · `FE` ⚡
 - **Depende de:** T-403
 - **Specs:** design §7.3 · RF-02, RF-03
-- **Aceptación:** solo se suelta en la ranura correcta; la vista previa usa `POST /api/vista-previa` con debounce; se muestran el diff de stats y la cadena.
+- **Hacer:** `Inventory`, `EquipmentSlot`, `EquipmentItem`, `LoadoutScreen`.
+- **Aceptación:** solo se suelta en el slot correcto; la vista previa usa `POST /api/preview` con debounce; se muestran el diff de stats y la cadena.
 
-### T-406 [ ] Mapa de la expedición · `FE` ⚡
+### T-406 [ ] `MapScreen` · `FE` ⚡
 - **Depende de:** T-403
 - **Specs:** design §7.2.b · RF-04, RF-23
+- **Hacer:** `MapScreen`, `MapNode`.
 
-### T-407 [ ] Arena: tarjetas, barras, efectos y acciones · `FE`
+### T-407 [ ] `ArenaScreen`: tarjetas, barras, efectos y acciones · `FE`
 - **Depende de:** T-403
 - **Specs:** design §7.4 · RF-06, RF-07, RF-19
-- **Aceptación:** habilidades en enfriamiento deshabilitadas con su contador; si el héroe está congelado solo aparece "Pasar turno"; atajos de teclado 1–4.
+- **Hacer:** `ArenaScreen`, `CombatantCard`, `HealthBar`, `EffectList`, `ActionPanel`.
+- **Aceptación:** habilidades en cooldown deshabilitadas con su contador; si el héroe está frozen solo aparece "Pasar turno"; atajos de teclado 1–4.
 
-### T-408 [ ] ★ Inspector de cadena · `FE`
+### T-408 [ ] ★ `ChainInspector` · `FE`
 - **Depende de:** T-407
 - **Specs:** design §7.4 · RF-20
-- **Aceptación:** cajas anidadas de afuera hacia adentro con color por categoría, turnos y `statsEnCapa`; las capas entran y salen animadas; texto de `cadena` debajo; pestañas Héroe / Enemigo.
+- **Aceptación:** cajas anidadas de afuera hacia adentro con color por categoría, turnos y `statsAtLayer`; las capas entran y salen animadas; texto de `chain` debajo; pestañas Héroe / Enemigo.
 
-### T-409 [ ] Log y reproductor de eventos con animaciones · `FE`
+### T-409 [ ] `CombatLog` + `eventPlayer` con animaciones · `FE`
 - **Depende de:** T-407
 - **Specs:** design §6 (columna UI), §7.6, §7.7 · RF-21, RF-22
-- **Aceptación:** cada tipo de evento tiene su animación; botón ⏩; con `prefers-reduced-motion` solo hay cambios de opacidad; avisos con sonner para TURNO_PERDIDO y crítico; el log es `aria-live`.
+- **Hacer:** `animation/eventPlayer.ts`, `CombatLog`, `FloatingNumber`.
+- **Aceptación:** cada tipo de evento tiene su animación; botón ⏩; con `prefers-reduced-motion` solo hay cambios de opacidad; avisos con sonner para `TURN_SKIPPED` y crítico; el log es `aria-live`.
 
-### T-410 [ ] Recompensa y Resumen · `FE` ⚡
-- **Depende de:** T-405 (reutiliza el inventario)
+### T-410 [ ] `RewardScreen` y `SummaryScreen` · `FE` ⚡
+- **Depende de:** T-405 (reutiliza `Inventory`)
 - **Specs:** design §7.2.c, §7.2.d · RF-25, RF-26, RF-27
 
 ### T-411 [ ] Responsive y pulido · `FE`
@@ -277,15 +287,16 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
 - **Depende de:** T-306, T-411
 - **Aceptación:** con `VITE_USE_MOCKS=false` se juega una expedición completa; las diferencias entre mocks y backend se corrigen **en el lado que no cumple el contrato**.
 
-### T-502 [ ] Escenarios de combate de punta a punta (backend) · `QA`
+### T-502 [ ] Escenarios de punta a punta (backend) · `QA`
 - **Depende de:** T-207
 - **Specs:** requirements §5 (todos los Gherkin)
+- **Hacer:** `src/test/java/com/rpgdecorator/scenarios/*ScenarioTest.java`.
 - **Aceptación:** un test por escenario Gherkin, con semilla fija.
 
-### T-503 [ ] Test de arquitectura · `QA` ⚡
+### T-503 [ ] `ArchitectureTest` · `QA` ⚡
 - **Depende de:** T-207
 - **Specs:** architecture §2 (regla de dependencias), AGENTS §3
-- **Hacer:** test que recorre los `.java` de `src/main` y falla si `dominio` importa `motor`/`api`/`infraestructura`, si `motor` importa `api`, o si hay un `import` de librerías prohibidas o de `java.lang.reflect.Proxy`.
+- **Hacer:** test que recorre los `.java` de `src/main` y falla si `domain` importa `engine`/`api`/`infrastructure`, si `engine` importa `api`, o si hay un `import` de librerías prohibidas o de `java.lang.reflect.Proxy`.
 
 ### T-504 [ ] Checklist manual de QA · `QA`
 - **Depende de:** T-501
@@ -299,7 +310,7 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
 
 ## Paralelismo sugerido (3 agentes a la vez)
 
-| Ola | Agente A (DOM → MOT) | Agente B (API) | Agente C (FE) |
+| Ola | Agente A (DOM → ENG) | Agente B (API) | Agente C (FE) |
 |---|---|---|---|
 | 1 | T-001, T-101 → T-104 | T-301, T-302 | T-002, T-401, T-402 |
 | 2 | T-105, T-106a–d, T-107, T-108 | (espera) / revisa specs | T-403 → T-406 |
@@ -314,3 +325,4 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
 | Fecha | Tarea | Agente | Nota |
 |---|---|---|---|
 | 2026-10-02 | — | ORQ | Specs iniciales creadas |
+| 2026-10-02 | — | ORQ | Código en inglés (ADR-004): specs y estructura de carpetas actualizadas |

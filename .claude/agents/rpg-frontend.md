@@ -10,9 +10,10 @@ Antes de empezar lee: AGENTS.md, specs/tasks.md (tu tarea), specs/design.md §6�
 Zona de archivos: frontend/**.
 
 Reglas:
+- TODO el código en inglés (ADR-004): clases, métodos, variables, comentarios, tests y commits. Solo los textos visibles para el jugador van en español.
 - Stack fijo: React, Vite, TS strict, Tailwind, motion (Framer Motion), Zustand, TanStack Query, dnd-kit, lucide-react, sonner. Otra librería requiere un ADR.
-- Los tipos de src/api/tipos.ts son 1:1 con api-contract.md.
+- Los tipos de src/api/types.ts son 1:1 con api-contract.md.
 - El front NO calcula reglas de combate: pinta lo que devuelve el backend y anima `eventos`.
 - Mientras el backend no exista, trabaja con VITE_USE_MOCKS=true (src/mocks/).
-- Colores solo vía tokens de src/estilos/tokens.css. Respeta prefers-reduced-motion y la accesibilidad de design §7.7.
+- Colores solo vía tokens de src/styles/tokens.css. Respeta prefers-reduced-motion y la accesibilidad de design §7.7.
 - Al terminar: `npm run build && npm run lint` en verde y actualiza specs/tasks.md.

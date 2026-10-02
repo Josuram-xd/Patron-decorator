@@ -2,6 +2,7 @@
 
 > **Qué** debe hacer el sistema. El **cómo** está en `architecture.md` y `design.md`.
 > Cada requisito tiene un ID (`RF-xx` / `RNF-xx`) que las tareas referencian.
+> Los nombres en código (inglés) de cada término están en `glossary.md`.
 
 ## 1. Objetivo
 
@@ -17,7 +18,7 @@ El objetivo didáctico es **ver el patrón funcionando**: la UI muestra la caden
 
 | Término | Significado |
 |---|---|
-| **Combatiente** | Héroe o enemigo. Interfaz que decoran todos los efectos |
+| **Combatiente** (`Combatant`) | Héroe o enemigo. Interfaz que decoran todos los efectos |
 | **Personaje base** | Componente concreto: stats base de una clase o enemigo, sin decorar |
 | **Efecto** | Decorador temporal con duración en turnos |
 | **Equipo** | Decorador permanente (duración infinita) que no se purga con Silencio |
@@ -49,15 +50,15 @@ El objetivo didáctico es **ver el patrón funcionando**: la UI muestra la caden
   2. El héroe **conserva su vida** y recupera el **30 % de su vida máxima** efectiva.
   3. Se reinician los enfriamientos.
 - **RF-25 — Recompensas.** Tras ganar un encuentro (salvo el jefe) se ofrecen **3 piezas de equipo** al azar y el jugador elige 1 (u omite). Si la ranura está ocupada, la nueva **reemplaza** a la anterior. Así la cadena de equipo crece durante la expedición.
-- **RF-26 — Fin de la expedición.** Si el héroe muere → expedición `FRACASADA`. Si vence al Dragón → `COMPLETADA`. Se muestra un resumen: enemigos vencidos, rondas totales, daño infligido y recibido, y la cadena final de equipo.
+- **RF-26 — Fin de la expedición.** Si el héroe muere → expedición `FAILED`. Si vence al Dragón → `COMPLETED`. Se muestra un resumen: enemigos vencidos, rondas totales, daño infligido y recibido, y la cadena final de equipo.
 - **RF-27 — Expedición nueva.** Desde el resumen se puede empezar otra expedición (nueva semilla → otros enemigos).
 
 ### Combate
-- **RF-05 — Iniciar encuentro.** Al entrar a un nivel se crea un combate con estado `EN_CURSO`, ronda 1, y el héroe actúa primero.
+- **RF-05 — Iniciar encuentro.** Al entrar a un nivel se crea un combate con estado `IN_PROGRESS`, ronda 1, y el héroe actúa primero.
 - **RF-06 — Acciones del héroe.** En su turno el héroe puede: **Atacar**, **Defender** (aplica `Defensa` por 1 turno) o usar una de sus **2 habilidades**.
 - **RF-07 — Enfriamiento.** Cada habilidad tiene un enfriamiento en turnos; no se puede usar hasta que llegue a 0.
 - **RF-08 — Turno del enemigo.** Después de la acción del héroe, el enemigo actúa automáticamente según su IA (ver `design.md §5.4`).
-- **RF-09 — Fin de combate.** El combate termina cuando un combatiente llega a 0 de vida: `VICTORIA` o `DERROTA`. Ya no se aceptan acciones.
+- **RF-09 — Fin de combate.** El combate termina cuando un combatiente llega a 0 de vida: `VICTORY` o `DEFEAT`. Ya no se aceptan acciones.
 
 ### Efectos (decoradores temporales)
 - **RF-10 — Aplicar efectos.** Las habilidades aplican efectos sobre uno mismo o sobre el rival. Cada efecto envuelve al combatiente como un nuevo decorador **en la capa exterior**.
@@ -88,6 +89,7 @@ El objetivo didáctico es **ver el patrón funcionando**: la UI muestra la caden
 - **RNF-05 — Cobertura.** Cada decorador tiene tests unitarios; el motor tiene tests de escenario completos.
 - **RNF-06 — Persistencia.** En memoria (no hay BD). Un reinicio del servidor borra los combates.
 - **RNF-07 — Rendimiento.** Una acción responde en menos de 100 ms en local.
+- **RNF-09 — Código en inglés.** Todo identificador, archivo, id, campo JSON, comentario y commit en inglés; los textos visibles para el jugador en español (ADR-004).
 - **RNF-08 — Responsive.** La UI se usa en escritorio (≥1024 px) y es legible en móvil (≥375 px).
 
 ---
