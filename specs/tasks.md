@@ -143,7 +143,7 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
 - **Hacer:** `engine/combat/Combat`, `CombatStatus`, `Action` (sealed: `Attack`, `Defend`, `UseAbility`, `Pass`), `TurnContextImpl`, `InvalidActionException`.
 - **Aceptación:** `TurnContextImpl.directDamage` y `heal` resuelven la **cadena exterior** por id y usan su `maxHealth` efectiva (test con LifeAmulet: curar puede superar la vida máxima base).
 
-### T-204 [~] (ENG) `CombatEngine.executeRound` · `ENG`
+### T-204 [x] `CombatEngine.executeRound` · `ENG`
 - **Depende de:** T-202, T-203
 - **Specs:** design §5.3, §4.7 · RF-05–RF-09, RF-15
 - **Aceptación:**
@@ -159,7 +159,7 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
 - **Specs:** design §4.8
 - **Aceptación:** por cada enemigo, un test que fuerza la condición de cada habilidad y verifica la elección; sin habilidades disponibles → `Attack`.
 
-### T-206 [ ] Expedición: agregado y sorteos · `ENG`
+### T-206 [~] (ENG) Expedición: agregado y sorteos · `ENG`
 - **Depende de:** T-204, T-205
 - **Specs:** design §5.5 · RF-02, RF-04, RF-24–RF-27
 - **Hacer:** `engine/expedition/Expedition`, `ExpeditionStatus`, `EnemyDraw`, `RewardDraw`, `RunStatistics`, `engine/ExpeditionRepository` (interfaz).
@@ -168,7 +168,7 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
   - Enemigos de cada nivel de su grupo correcto; nivel 4 siempre `dragon`.
   - Recompensas: 3 distintas, ninguna ya equipada.
 
-### T-207 [ ] `ExpeditionService` · `ENG`
+### T-207 [~] (ENG) `ExpeditionService` · `ENG`
 - **Depende de:** T-206
 - **Specs:** design §5.5 · RF-24, RF-25, RF-26
 - **Hacer:** `create`, `act`, `chooseReward`, `preview` (las dos formas de api-contract §4), `get`, `delete`. Sincronización por expedición.
@@ -330,3 +330,4 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
 | 2026-10-02 | T-202 | ENG | `DamageCalculator` + 13 tests. Verificado contra stubs del dominio: revalidar al integrar F1 |
 | 2026-10-02 | T-203 | ENG | `Combat`, `Action`, `TurnContextImpl`, `LoggedEvent`, `ErrorCode`, `InvalidActionException` + 31 tests (contra stubs del dominio) |
 | 2026-10-02 | T-205 | ENG | `EnemyAI` + 36 tests (contra stubs del dominio). Regla de cooldown: lista si el valor guardado es <= 1 al decidir (se decrementa al inicio del turno) → pendiente de confirmar en open-questions |
+| 2026-10-02 | T-204 | ENG | `CombatEngine.executeRound` + 20 tests (contra stubs). `EffectManager` gana `shieldAbsorption` y `blockingEffectId`. Decisiones sobre muertes/TURN_ENDED/purga tras evasión → open-questions |
