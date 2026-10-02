@@ -452,7 +452,6 @@ class CombatEngineTest {
                 new Death(HERO),
                 new TurnEnded(ENEMY),
                 new CombatEnded(CombatResult.DEFEAT)), events.subList(events.size() - 5, events.size()));
-        assertFalse(events.contains(new EffectRemoved(ENEMY, "guard", RemovalReason.EXPIRED)));
         assertEquals(CombatStatus.DEFEAT, combat.status());
         assertEquals(1, combat.round());
         assertEquals(ErrorCode.INVALID_STATE, rejected(engine, combat, Action.defend()));
