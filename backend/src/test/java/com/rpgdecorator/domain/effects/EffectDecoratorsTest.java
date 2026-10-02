@@ -14,7 +14,6 @@ import com.rpgdecorator.domain.Side;
 import com.rpgdecorator.domain.Stats;
 import com.rpgdecorator.domain.decorator.EffectDecorator;
 import com.rpgdecorator.domain.equipment.DragonArmorDecorator;
-import com.rpgdecorator.domain.event.CombatEvent;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -56,7 +55,8 @@ class EffectDecoratorsTest {
         assertEquals(new DamageResult(10, 20, 0, false), result);
         assertEquals(110, base.currentHealth());
         assertTrue(shield.shouldBeRemoved());
-        assertEquals(List.of(new CombatEvent.Absorbed("hero", 20, 0)), ctx.events);
+        assertEquals(0, shield.absorption());
+        assertTrue(ctx.events.isEmpty());
     }
 
     @Test

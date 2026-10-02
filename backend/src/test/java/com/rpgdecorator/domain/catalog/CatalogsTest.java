@@ -45,7 +45,11 @@ class CatalogsTest {
 
     private static String abilityRow(Ability a) {
         return row(a.id(), a.name(), "cd" + a.cooldown(), "x" + a.damageMultiplier(),
-                a.effectsOn(Target.SELF), a.effectsOn(Target.OPPONENT), a.purgesOpponent());
+                effectIds(a, Target.SELF), effectIds(a, Target.OPPONENT), a.purgesOpponent());
+    }
+
+    private static List<String> effectIds(Ability ability, Target target) {
+        return ability.effectsOn(target).stream().map(EffectApplication::effectId).toList();
     }
 
     private static String statsRow(Stats s) {

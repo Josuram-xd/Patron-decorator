@@ -9,11 +9,11 @@ public record Ability(String id, String name, String description, int cooldown,
         effects = List.copyOf(effects);
     }
 
-    public boolean attacks() {
+    public boolean dealsDamage() {
         return damageMultiplier > 0;
     }
 
-    public List<String> effectsOn(Target target) {
-        return effects.stream().filter(e -> e.target() == target).map(EffectApplication::effectId).toList();
+    public List<EffectApplication> effectsOn(Target target) {
+        return effects.stream().filter(e -> e.target() == target).toList();
     }
 }
