@@ -182,13 +182,13 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
 
 ## F3 — API (HTTP + JSON a mano) · paquete `com.rpgdecorator.api`
 
-### T-301 [ ] JSON mínimo · `API` ⚡
+### T-301 [~] (API) JSON mínimo · `API` ⚡
 - **Depende de:** T-001
 - **Specs:** architecture §2.2 · RNF-01
 - **Hacer:** `api/json/JsonValue` (sealed) + `Json.write(JsonValue)` + `Json.parse(String)` + `InvalidJsonException`. Escapes `\" \\ \n \t \uXXXX`, números enteros y decimales, anidación.
 - **Aceptación:** tests ida y vuelta; un JSON inválido lanza `InvalidJsonException` con su posición; las tildes y la ñ se escriben y leen bien.
 
-### T-302 [ ] Servidor, router, CORS y errores · `API` ⚡
+### T-302 [~] (API) Servidor, router, CORS y errores · `API` ⚡
 - **Depende de:** T-001
 - **Specs:** api-contract §1, §8
 - **Hacer:** `HttpApiServer` (HttpServer en :8080, puerto configurable con la variable `PORT`), `Router` con parámetros de ruta (`/api/expeditions/{id}`), `Cors`, `HttpError`, y `/api/health`.
