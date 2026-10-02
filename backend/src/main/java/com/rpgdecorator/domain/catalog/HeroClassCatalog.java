@@ -1,7 +1,7 @@
 package com.rpgdecorator.domain.catalog;
 
-import static com.rpgdecorator.domain.catalog.EffectApplication.onOpponent;
-import static com.rpgdecorator.domain.catalog.EffectApplication.onSelf;
+import static com.rpgdecorator.domain.catalog.EffectApplication.opponent;
+import static com.rpgdecorator.domain.catalog.EffectApplication.self;
 
 import com.rpgdecorator.domain.Stats;
 import java.util.List;
@@ -15,16 +15,16 @@ public final class HeroClassCatalog {
                     List.of(
                             new Ability("war_cry", "Grito de guerra",
                                     "Entra en Furia: +50% ataque, -30% defensa durante 2 turnos.",
-                                    3, 0, List.of(onSelf("rage")), false),
+                                    3, 0, List.of(self("rage")), false),
                             new Ability("shield_wall", "Muro de escudos",
                                     "Levanta un Escudo que absorbe 20 de daño durante 3 turnos.",
-                                    3, 0, List.of(onSelf("shield")), false))),
+                                    3, 0, List.of(self("shield")), false))),
             new HeroClass("mage", "Mago", "Frágil, pero controla el combate con hielo y silencio.",
                     new Stats(80, 18, 4, 6, 10),
                     List.of(
                             new Ability("ice_bolt", "Rayo de hielo",
                                     "Golpea con el 80% del ataque y congela al rival 1 turno.",
-                                    4, 0.8, List.of(onOpponent("frozen")), false),
+                                    4, 0.8, List.of(opponent("frozen")), false),
                             new Ability("arcane_silence", "Silencio arcano",
                                     "Elimina todos los efectos temporales del rival.",
                                     4, 0, List.of(), true))),
@@ -33,10 +33,10 @@ public final class HeroClassCatalog {
                     List.of(
                             new Ability("poison_arrow", "Flecha envenenada",
                                     "Golpea con el 70% del ataque y envenena al rival 3 turnos.",
-                                    3, 0.7, List.of(onOpponent("poison")), false),
+                                    3, 0.7, List.of(opponent("poison")), false),
                             new Ability("vampiric_arrow", "Flecha vampírica",
                                     "Gana Vampirismo 3 turnos y golpea con el 100% del ataque.",
-                                    4, 1.0, List.of(onSelf("lifesteal")), false))));
+                                    4, 1.0, List.of(self("lifesteal")), false))));
 
     private HeroClassCatalog() {
     }

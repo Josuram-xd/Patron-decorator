@@ -7,7 +7,6 @@ import com.rpgdecorator.domain.TurnContext;
 import com.rpgdecorator.domain.decorator.Category;
 import com.rpgdecorator.domain.decorator.Duration;
 import com.rpgdecorator.domain.decorator.EffectDecorator;
-import com.rpgdecorator.domain.event.CombatEvent;
 import java.util.Map;
 
 public final class ShieldDecorator extends EffectDecorator {
@@ -45,9 +44,7 @@ public final class ShieldDecorator extends EffectDecorator {
         int absorbedElemental = Math.min(absorption - absorbedPhysical, damage.elemental());
         int absorbed = absorbedPhysical + absorbedElemental;
         absorption -= absorbed;
-        if (absorbed > 0) {
-            ctx.emit(new CombatEvent.Absorbed(id(), absorbed, absorption));
-        }
+        // The engine reports ABSORBED from the DamageResult; the shield only intercepts the damage.
         Damage passed = damage
                 .withPhysical(damage.physical() - absorbedPhysical)
                 .withElemental(damage.elemental() - absorbedElemental);

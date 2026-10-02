@@ -13,4 +13,9 @@ public record HeroClass(String id, String name, String description, Stats stats,
     public Optional<Ability> findAbility(String abilityId) {
         return abilities.stream().filter(a -> a.id().equals(abilityId)).findFirst();
     }
+
+    /** The ability with that id, or {@code null} if this class does not have it. */
+    public Ability ability(String abilityId) {
+        return findAbility(abilityId).orElse(null);
+    }
 }
