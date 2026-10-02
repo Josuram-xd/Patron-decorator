@@ -154,7 +154,7 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
   - El orden de resolución de habilidades de §4.7; los efectos sobre el rival no se aplican si hubo evasión.
   - `VICTORY` / `DEFEAT` + `COMBAT_ENDED`; acción posterior → `InvalidActionException`.
 
-### T-205 [~] (ENG) `EnemyAI` · `ENG` ⚡
+### T-205 [x] `EnemyAI` · `ENG` ⚡
 - **Depende de:** T-203
 - **Specs:** design §4.8
 - **Aceptación:** por cada enemigo, un test que fuerza la condición de cada habilidad y verifica la elección; sin habilidades disponibles → `Attack`.
@@ -329,3 +329,4 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
 | 2026-10-02 | T-201 | ENG | `EffectManager`, `InteractionRules`, `Layer` + 50 tests. Verificado contra stubs del dominio (el dominio real F1 aún no está en el repo): revalidar al integrar F1 |
 | 2026-10-02 | T-202 | ENG | `DamageCalculator` + 13 tests. Verificado contra stubs del dominio: revalidar al integrar F1 |
 | 2026-10-02 | T-203 | ENG | `Combat`, `Action`, `TurnContextImpl`, `LoggedEvent`, `ErrorCode`, `InvalidActionException` + 31 tests (contra stubs del dominio) |
+| 2026-10-02 | T-205 | ENG | `EnemyAI` + 36 tests (contra stubs del dominio). Regla de cooldown: lista si el valor guardado es <= 1 al decidir (se decrementa al inicio del turno) → pendiente de confirmar en open-questions |

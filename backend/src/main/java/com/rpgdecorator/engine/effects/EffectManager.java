@@ -7,6 +7,7 @@ import com.rpgdecorator.domain.catalog.EffectCatalog;
 import com.rpgdecorator.domain.catalog.EquipmentCatalog;
 import com.rpgdecorator.domain.decorator.Category;
 import com.rpgdecorator.domain.decorator.EffectDecorator;
+import com.rpgdecorator.domain.effects.ShieldDecorator;
 import com.rpgdecorator.domain.event.CombatEvent;
 import com.rpgdecorator.domain.event.RemovalReason;
 
@@ -175,6 +176,34 @@ public final class EffectManager {
      */
     public boolean hasEffect(Combatant outer, String effectId) {
         return find(outer, effectId).isPresent();
+    }
+
+    /**
+     * Remaining absorption of the shield in the chain, or 0 if there is none (the {@code remaining}
+     * field of the {@code ABSORBED} event, design 6). A depleted shield stays in the chain until the
+     * end of its owner's turn, so it may report 0 here.
+     */
+    public int shieldAbsorption(Combatant outer) {
+        for (EffectDecorator layer : unwind(outer).decorators()) {
+            if (layer instanceof ShieldDecorator shield) {
+                return shield.absorption();
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * The effect that stops the combatant from acting (the {@code effectId} of {@code TURN_SKIPPED}):
+     * the outermost layer whose {@code canAct} is {@code false} while the layer it wraps would act.
+     * Generic on purpose: no effect id is hard-coded. {@code null} if the combatant can act.
+     */
+    public String blockingEffectId(Combatant outer, TurnContext ctx) {
+        for (EffectDecorator layer : unwind(outer).decorators()) {
+            if (!layer.canAct(ctx) && layer.wrapped().canAct(ctx)) {
+                return layer.effectId();
+            }
+        }
+        return null;
     }
 
     /** The chain for the inspector, outer to inner (positions 0..n), with the base last. */
