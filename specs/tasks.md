@@ -22,7 +22,7 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
 
 ## F0 — Setup
 
-### T-001 [ ] Esqueleto del backend · `ORQ`
+### T-001 [x] Esqueleto del backend · `ORQ`
 - **Depende de:** —
 - **Specs:** architecture §2.1, §2.2, ADR-001
 - **Hacer:** `backend/pom.xml` (groupId `com.rpgdecorator`, artifactId `rpg-decorator`, Java 25, JUnit 5 en scope test, surefire, exec-maven-plugin con `mainClass=com.rpgdecorator.App`, jar ejecutable `rpg-decorator.jar`). El árbol de paquetes **ya existe** con `.gitkeep`: reemplázalos por un `package-info.java` (Javadoc en inglés) en cada paquete. `App.java` que imprime "RPG Decorator" y termina.
@@ -36,7 +36,7 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
 - **Hacer:** Vite + React + TS strict; Tailwind 4, Framer Motion (`motion`), Zustand, TanStack Query, dnd-kit, lucide-react, sonner, ESLint + Prettier. Proxy `/api → http://localhost:8080` en `vite.config.ts`. Las carpetas de architecture §3.1 **ya existen** con `.gitkeep`: genera el proyecto Vite en una carpeta temporal y copia sus archivos a `frontend/` sin borrarlas. `styles/tokens.css` con las variables de design §7.5.
 - **Aceptación:** `npm run dev` muestra "RPG Decorator"; `npm run build` y `npm run lint` pasan.
 
-### T-003 [ ] Raíz del repo · `ORQ` ⚡
+### T-003 [x] Raíz del repo · `ORQ` ⚡
 - **Depende de:** —
 - **Hacer:** `.gitignore` (target/, node_modules/, dist/, .idea/, *.iml, .vscode/), `.editorconfig`, sección "Cómo correrlo" del README.
 - **Aceptación:** `git status` limpio tras el build de back y front.
@@ -45,19 +45,19 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
 
 ## F1 — Domain (el patrón Decorator) · paquete `com.rpgdecorator.domain`
 
-### T-101 [ ] Tipos de valor · `DOM`
+### T-101 [x] Tipos de valor · `DOM`
 - **Depende de:** T-001
 - **Specs:** design §2.1 · RNF-02
 - **Hacer:** `Stats` (métodos `with…` y límites ≥ 0, `critChance` ≤ 100), `Damage`, `DamageResult`, `DamageType`, `Side`, `decorator/Category`, `decorator/Duration` (`PERMANENT`, `decrement`, `isExpired`).
 - **Aceptación:** tests de `Stats` (inmutabilidad, límites) y de `Duration` (`PERMANENT` nunca expira; 1 → 0 expira).
 
-### T-102 [ ] Contratos: `Combatant`, `TurnContext`, `RandomSource`, eventos · `DOM`
+### T-102 [x] Contratos: `Combatant`, `TurnContext`, `RandomSource`, eventos · `DOM`
 - **Depende de:** T-101
 - **Specs:** design §2.2, §2.3, §6
 - **Hacer:** interfaces `Combatant`, `TurnContext`, `RandomSource`; `event/CombatEvent` como `sealed interface` con un `record` por tipo de design §6 (`TurnStarted`, `ActionTaken`, `DamageDealt`, `Evaded`, `Absorbed`, `Healed`, `EffectApplied`, `EffectRefreshed`, `EffectRemoved`, `TurnSkipped`, `Death`, `TurnEnded`, `CombatEnded`).
 - **Aceptación:** compila; un `switch` exhaustivo sobre `CombatEvent` sin `default` (un test lo demuestra).
 
-### T-103 [ ] `BaseCharacter` (Componente concreto) · `DOM`
+### T-103 [x] `BaseCharacter` (Componente concreto) · `DOM`
 - **Depende de:** T-102
 - **Specs:** design §2.2 (columna BaseCharacter), §3.1
 - **Aceptación:**
@@ -65,7 +65,7 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
   - `takeDamage` resta `physical + elemental` y devuelve un `DamageResult` correcto.
   - `describeChain()` devuelve el label.
 
-### T-104 [ ] `EffectDecorator` (Decorador base) · `DOM`
+### T-104 [x] `EffectDecorator` (Decorador base) · `DOM`
 - **Depende de:** T-103
 - **Specs:** design §2.4, §3.6 · RNF-02
 - **Hacer:** clase abstracta que **delega todos** los métodos; `wrapped()`, `shouldBeRemoved()`, `refresh()`, `advanceTurn()` con `justApplied`, `copyOnto()` abstracto, `describeChain()`.
@@ -74,18 +74,18 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
   - `id()` es el del base en cualquier profundidad.
   - `advanceTurn()`: el primer llamado no decrementa; los siguientes sí.
 
-### T-105 [ ] Decoradores de equipo (`domain.equipment`) · `DOM` ⚡
+### T-105 [x] Decoradores de equipo (`domain.equipment`) · `DOM` ⚡
 - **Depende de:** T-104
 - **Specs:** design §4.6
 - **Hacer:** `SwordDecorator`, `WarAxeDecorator`, `RuneStaffDecorator`, `LeatherArmorDecorator`, `DragonArmorDecorator`, `FireRingDecorator`, `LifeAmuletDecorator`, `WindBootsDecorator`.
 - **Aceptación:** un test por pieza; un test de orden `Rage(Sword(base))` ≠ `Sword(Rage(base))` (design §3.4); si `RageDecorator` aún no existe, puede usar un decorador de prueba ×1.5.
 
-### T-106a [ ] Efectos: `PoisonDecorator` y `RegenerationDecorator` · `DOM` ⚡
+### T-106a [x] Efectos: `PoisonDecorator` y `RegenerationDecorator` · `DOM` ⚡
 - **Depende de:** T-104
 - **Specs:** design §4.2 · RF-12
 - **Aceptación:** al llamar `onTurnStart`, piden `directDamage` o `heal` al contexto (con un `TurnContext` falso en el test) y luego delegan.
 
-### T-106b [ ] Efectos: `ShieldDecorator` y `ThornsDecorator` · `DOM` ⚡
+### T-106b [x] Efectos: `ShieldDecorator` y `ThornsDecorator` · `DOM` ⚡
 - **Depende de:** T-104
 - **Specs:** design §4.2, §4.3 · RF-14, RF-16
 - **Aceptación:**
@@ -94,23 +94,23 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
   - Thorns: `reflected = 30 %` de `taken`; 0 si `damage.reflectable == false`.
   - `Shield(Thorns(base))`: el reflejo se calcula sobre lo que **pasó** el escudo.
 
-### T-106c [ ] Efectos: `RageDecorator`, `GuardDecorator` y `FrozenDecorator` · `DOM` ⚡
+### T-106c [x] Efectos: `RageDecorator`, `GuardDecorator` y `FrozenDecorator` · `DOM` ⚡
 - **Depende de:** T-104
 - **Specs:** design §4.2 · RF-13, RF-15
 - **Aceptación:** stats modificadas con redondeo hacia abajo; `FrozenDecorator.canAct() == false` sin importar las capas internas.
 
-### T-106d [ ] Efecto: `LifestealDecorator` · `DOM` ⚡
+### T-106d [x] Efecto: `LifestealDecorator` · `DOM` ⚡
 - **Depende de:** T-104
 - **Specs:** design §4.2
 - **Aceptación:** `onDamageDealt` con `taken = 20` → `heal(6)`; con `taken = 0` → no cura.
 
-### T-107 [ ] Catálogos (`domain.catalog`) · `DOM`
+### T-107 [x] Catálogos (`domain.catalog`) · `DOM`
 - **Depende de:** T-105, T-106a–d
 - **Specs:** design §4.2, §4.6, §4.7, §4.8 · RF-01, RF-04
 - **Hacer:** `EffectCatalog`, `EquipmentCatalog` (con `Slot`), `HeroClassCatalog`, `EnemyCatalog` (8 enemigos + grupos por nivel), `Ability`, `EffectApplication`, `Target`, `EnemyDefinition` (con condiciones de IA como `Predicate`).
 - **Aceptación:** los valores coinciden **exactamente** con las tablas de design (un test recorre cada catálogo); ids únicos; cada nivel 1–3 tiene ≥ 2 enemigos.
 
-### T-108 [ ] Tests didácticos de las "trampas del Decorator" · `DOM`
+### T-108 [x] Tests didácticos de las "trampas del Decorator" · `DOM`
 - **Depende de:** T-107
 - **Specs:** design §3
 - **Aceptación:** un test por trampa (§3.1–§3.6) en `DecoratorPitfallsTest`, con nombres que la expliquen, p. ej. `selfCallInBaseIgnoresArmor()`, `removingMiddleLayerKeepsOuterState()`. Cada test lleva un comentario de 2–3 líneas (en inglés) de por qué existe.
@@ -329,3 +329,10 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
 | 2026-10-02 | T-201 | ENG | `EffectManager`, `InteractionRules`, `Layer` + 50 tests. Verificado contra stubs del dominio (el dominio real F1 aún no está en el repo): revalidar al integrar F1 |
 | 2026-10-02 | T-202 | ENG | `DamageCalculator` + 13 tests. Verificado contra stubs del dominio: revalidar al integrar F1 |
 | 2026-10-02 | T-203 | ENG | `Combat`, `Action`, `TurnContextImpl`, `LoggedEvent`, `ErrorCode`, `InvalidActionException` + 31 tests (contra stubs del dominio) |
+| 2026-10-02 | T-001 | ORQ | pom.xml, App, test de humo y `package-info.java` por paquete |
+| 2026-10-02 | T-003 | ORQ | `.gitignore`, `.editorconfig` y "Cómo correrlo" en el README |
+| 2026-10-02 | T-101–T-104 | DOM | Tipos de valor, contratos, `BaseCharacter` y `EffectDecorator` (ver Q-005, Q-006) |
+| 2026-10-02 | T-105, T-106a–d | DOM | 8 decoradores de equipo y 8 efectos temporales (ver Q-007) |
+| 2026-10-02 | T-107, T-108 | DOM | Catálogos (`HeroClass`, `EnemyAbility`, `AiCondition`, `AiView`) y `DecoratorPitfallsTest` |
+| 2026-10-02 | — | ORQ | Integración de F1 con el motor: T-201–T-203 revalidados contra el dominio real, 160 tests en verde |
+| 2026-10-02 | T-204 | ENG | `CombatEngine` escrito sobre `Combat`/`DamageCalculator`; compila, faltan sus tests |
