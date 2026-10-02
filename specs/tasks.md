@@ -182,13 +182,13 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
 
 ## F3 — API (HTTP + JSON a mano) · paquete `com.rpgdecorator.api`
 
-### T-301 [~] (API) JSON mínimo · `API` ⚡
+### T-301 [x] JSON mínimo · `API` ⚡
 - **Depende de:** T-001
 - **Specs:** architecture §2.2 · RNF-01
 - **Hacer:** `api/json/JsonValue` (sealed) + `Json.write(JsonValue)` + `Json.parse(String)` + `InvalidJsonException`. Escapes `\" \\ \n \t \uXXXX`, números enteros y decimales, anidación.
 - **Aceptación:** tests ida y vuelta; un JSON inválido lanza `InvalidJsonException` con su posición; las tildes y la ñ se escriben y leen bien.
 
-### T-302 [~] (API) Servidor, router, CORS y errores · `API` ⚡
+### T-302 [x] Servidor, router, CORS y errores · `API` ⚡
 - **Depende de:** T-001
 - **Specs:** api-contract §1, §8
 - **Hacer:** `HttpApiServer` (HttpServer en :8080, puerto configurable con la variable `PORT`), `Router` con parámetros de ruta (`/api/expeditions/{id}`), `Cors`, `HttpError`, y `/api/health`.
@@ -337,3 +337,5 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
 | 2026-10-02 | T-105, T-106a–d | DOM | 8 decoradores de equipo y 8 efectos temporales (ver Q-014) |
 | 2026-10-02 | T-107, T-108 | DOM | Catálogos y `DecoratorPitfallsTest` |
 | 2026-10-02 | — | ORQ | F1 integrado con F2: T-201–T-205 revalidados contra el dominio real, 216 tests en verde (ver Q-016) |
+| 2026-10-02 | T-301 | API | `JsonValue` (sealed), `Json.write`/`Json.parse` e `InvalidJsonException` con posición + 10 tests |
+| 2026-10-02 | T-302 | API | `HttpApiServer`, `Router`, `Cors`, `HttpError` y `/api/health` + 11 tests de integración con `HttpClient` |
