@@ -124,6 +124,24 @@ visuales con las stats en cada nivel. Turno a turno se ve cómo se apilan, expir
 
 ---
 
+## ▶️ Cómo correrlo
+
+Requisitos: **JDK 25** y **Maven 3.9** (backend); **Node 20+** (frontend, a partir de T-002).
+
+```
+cd backend
+mvn test                              # tests
+mvn -q exec:java                      # arranca la app
+mvn -q package                        # genera target/rpg-decorator.jar
+java -jar target/rpg-decorator.jar
+```
+
+```
+cd frontend
+npm install
+npm run dev                           # http://localhost:5173 (proxy /api → :8080)
+```
+
 ## 🔁 Flujo spec-driven
 
 ```
