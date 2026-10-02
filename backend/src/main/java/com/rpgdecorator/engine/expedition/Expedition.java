@@ -6,7 +6,7 @@ import com.rpgdecorator.domain.catalog.EnemyCatalog;
 import com.rpgdecorator.domain.catalog.EquipmentCatalog;
 import com.rpgdecorator.domain.catalog.HeroClass;
 import com.rpgdecorator.domain.catalog.HeroClassCatalog;
-import com.rpgdecorator.domain.equipment.Slot;
+import com.rpgdecorator.domain.catalog.Slot;
 import com.rpgdecorator.engine.ErrorCode;
 import com.rpgdecorator.engine.combat.Combat;
 import com.rpgdecorator.engine.combat.CombatStatus;
@@ -39,7 +39,7 @@ import java.util.Objects;
 public final class Expedition {
 
     /** Levels of an expedition (RF-04); the last one is the boss. */
-    public static final int TOTAL_LEVELS = EnemyCatalog.BOSS_LEVEL;
+    public static final int TOTAL_LEVELS = EnemyCatalog.TOTAL_LEVELS;
 
     /** Order in which equipment wraps the base: first slot = innermost decorator. */
     public static final List<Slot> SLOT_ORDER = List.of(Slot.WEAPON, Slot.ARMOR, Slot.ACCESSORY);
@@ -203,7 +203,7 @@ public final class Expedition {
     /** Puts the piece in its slot; returns the piece it replaced, or {@code null}. */
     String equip(Slot slot, String itemId) {
         Objects.requireNonNull(itemId, "itemId");
-        if (EquipmentCatalog.slotOf(itemId) != slot) {
+        if (EquipmentCatalog.get(itemId).slot() != slot) {
             throw new IllegalArgumentException(itemId + " does not go in slot " + slot);
         }
         return equipment.put(slot, itemId);
@@ -211,7 +211,7 @@ public final class Expedition {
 
     /** Puts the piece in its own slot; returns the piece it replaced, or {@code null}. */
     String equip(String itemId) {
-        return equip(EquipmentCatalog.slotOf(itemId), itemId);
+        return equip(EquipmentCatalog.get(itemId).slot(), itemId);
     }
 
     /** Starts the combat of the current level: status IN_PROGRESS and no offered rewards. */

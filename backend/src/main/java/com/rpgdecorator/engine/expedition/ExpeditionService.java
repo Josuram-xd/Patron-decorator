@@ -8,7 +8,7 @@ import com.rpgdecorator.domain.catalog.EnemyDefinition;
 import com.rpgdecorator.domain.catalog.EquipmentCatalog;
 import com.rpgdecorator.domain.catalog.HeroClass;
 import com.rpgdecorator.domain.catalog.HeroClassCatalog;
-import com.rpgdecorator.domain.equipment.Slot;
+import com.rpgdecorator.domain.catalog.Slot;
 import com.rpgdecorator.engine.ErrorCode;
 import com.rpgdecorator.engine.ExpeditionRepository;
 import com.rpgdecorator.engine.combat.Action;
@@ -105,7 +105,7 @@ public final class ExpeditionService {
         List<String> enemies = EnemyDraw.draw(random);
         BaseCharacter heroBase = BaseCharacter.hero(heroClass);
         Map<Slot, String> equipment = new EnumMap<>(Slot.class);
-        equipment.put(EquipmentCatalog.slotOf(startingItemId), startingItemId);
+        equipment.put(EquipmentCatalog.get(startingItemId).slot(), startingItemId);
 
         Expedition expedition = new Expedition(UUID.randomUUID().toString(), actualSeed, heroClass.id(),
                 enemies, heroBase, equipment, random);
@@ -230,7 +230,7 @@ public final class ExpeditionService {
                 throw new InvalidActionException(ErrorCode.INVALID_VALUE, "Pieza de equipo vacía");
             }
             requireItem(itemId);
-            Slot slot = EquipmentCatalog.slotOf(itemId);
+            Slot slot = EquipmentCatalog.get(itemId).slot();
             if (bySlot.containsKey(slot)) {
                 throw new InvalidActionException(ErrorCode.INVALID_VALUE,
                         "Solo se puede llevar una pieza por ranura: " + bySlot.get(slot) + " y " + itemId);
@@ -254,7 +254,7 @@ public final class ExpeditionService {
         requireItem(itemId);
         Expedition expedition = find(expeditionId);
         synchronized (expedition) {
-            Slot slot = EquipmentCatalog.slotOf(itemId);
+            Slot slot = EquipmentCatalog.get(itemId).slot();
             Map<Slot, String> bySlot = new EnumMap<>(expedition.equipment());
             String previous = bySlot.put(slot, itemId);
             String replaces = itemId.equals(previous) ? null : previous;
@@ -313,14 +313,14 @@ public final class ExpeditionService {
     }
 
     private static HeroClass heroClass(String heroClassId) {
-        if (!HeroClassCatalog.exists(heroClassId)) {
+        if (!HeroClassCatalog.find(heroClassId).isPresent()) {
             throw new InvalidActionException(ErrorCode.INVALID_VALUE, "Clase de héroe desconocida: " + heroClassId);
         }
         return HeroClassCatalog.get(heroClassId);
     }
 
     private static void requireItem(String itemId) {
-        if (!EquipmentCatalog.exists(itemId)) {
+        if (!EquipmentCatalog.find(itemId).isPresent()) {
             throw new InvalidActionException(ErrorCode.INVALID_VALUE, "Pieza de equipo desconocida: " + itemId);
         }
     }

@@ -159,7 +159,7 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
 - **Specs:** design §4.8
 - **Aceptación:** por cada enemigo, un test que fuerza la condición de cada habilidad y verifica la elección; sin habilidades disponibles → `Attack`.
 
-### T-206 [~] (ENG) Expedición: agregado y sorteos · `ENG`
+### T-206 [x] Expedición: agregado y sorteos · `ENG`
 - **Depende de:** T-204, T-205
 - **Specs:** design §5.5 · RF-02, RF-04, RF-24–RF-27
 - **Hacer:** `engine/expedition/Expedition`, `ExpeditionStatus`, `EnemyDraw`, `RewardDraw`, `RunStatistics`, `engine/ExpeditionRepository` (interfaz).
@@ -168,7 +168,7 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
   - Enemigos de cada nivel de su grupo correcto; nivel 4 siempre `dragon`.
   - Recompensas: 3 distintas, ninguna ya equipada.
 
-### T-207 [~] (ENG) `ExpeditionService` · `ENG`
+### T-207 [x] `ExpeditionService` · `ENG`
 - **Depende de:** T-206
 - **Specs:** design §5.5 · RF-24, RF-25, RF-26
 - **Hacer:** `create`, `act`, `chooseReward`, `preview` (las dos formas de api-contract §4), `get`, `delete`. Sincronización por expedición.
@@ -339,3 +339,4 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
 | 2026-10-02 | — | ORQ | F1 integrado con F2: T-201–T-205 revalidados contra el dominio real, 216 tests en verde (ver Q-016) |
 | 2026-10-02 | T-301 | API | `JsonValue` (sealed), `Json.write`/`Json.parse` e `InvalidJsonException` con posición + 10 tests |
 | 2026-10-02 | T-302 | API | `HttpApiServer`, `Router`, `Cors`, `HttpError` y `/api/health` + 11 tests de integración con `HttpClient` |
+| 2026-10-02 | T-206, T-207 | ENG | `Expedition`, `EnemyDraw`, `RewardDraw`, `RunStatistics`, `SeededRandom`, `ExpeditionService` y `ExpeditionRepository` alineados con el dominio real (`Slot` en `domain.catalog`) + 29 tests. 266 tests en verde; verificado con JDK 21 (`-Dmaven.compiler.release=21`) por Q-015 |
