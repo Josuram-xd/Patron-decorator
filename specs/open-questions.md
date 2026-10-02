@@ -92,3 +92,24 @@
 - `seed`: si en Java es `long`, en JS pierde precisión por encima de 2^53 → limitarla o enviarla como texto.
 - Al ganar vida máxima por una recompensa (Amuleto de vida): ¿la vida actual se mantiene o sube? (el mock la mantiene).
 - `PASS`: ¿emite `ACTION`? (el motor emite `ACTION PASS` solo si el enemigo pasa pudiendo actuar; el héroe congelado solo produce `TURN_SKIPPED`).
+
+---
+
+## Dudas de F0/F1 (dominio real) e integración con F2
+
+### Q-014 — Daño del veneno: 5 o 6
+- Tarea: T-106a · Agente: DOM · Estado: ABIERTA
+- Duda: el Gherkin de requirements §5 usa "Envenenado (5 de daño, 3 turnos)"; design §4.2 y api-contract §3 dicen 6.
+- Propuesta: el catálogo usa 6; `PoisonDecorator` acepta daño y turnos por constructor para que el escenario pueda usar 5. Alinear el Gherkin a 6.
+
+### Q-015 — JDK 25 y Maven no están instalados
+- Tarea: T-001 · Agente: ORQ · Estado: ABIERTA
+- Duda: Q-002 asume Temurin 25, pero esta máquina tiene `JAVA_HOME` en JDK 21 y `mvn` no está en el PATH.
+- Propuesta: instalar Temurin 25 y Maven 3.9. Mientras tanto el build se verifica con el JDK 25 (JBR) y el Maven que trae IntelliJ.
+
+### Q-016 — Integración de F1 con F2
+- Tarea: T-101–T-108 · Agente: DOM · Estado: RESUELTA
+- El dominio real se adaptó a la API contra la que se escribió el motor: `RemovalReason` y `CombatResult` en `domain.event`, `CombatEvent.type()`, `HeroClass`, `EnemyAbility(ability, AiCondition)`, `AiView`, `EffectApplication.self/opponent`, `BaseCharacter.hero/enemy`, `copyOnto` público (Q-005, Q-006).
+- Los records de `CombatEvent` no llevan `seq` ni `round`: los pone el motor en `LoggedEvent`. `ShieldDecorator` no emite `ABSORBED`; lo emite el motor a partir del `DamageResult`.
+- `changeHealth` es `final` en `EffectDecorator` ("ningún decorador lo sobrescribe", design §2.2).
+- Revalidación: los 216 tests (66 de dominio + 150 de motor) pasan contra el dominio real.
