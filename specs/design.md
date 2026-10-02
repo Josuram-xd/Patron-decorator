@@ -281,11 +281,18 @@ Orden de resolución de una habilidad: 1) efectos sobre uno mismo, 2) daño (si 
 
 ### 4.8 Enemigos (`CatalogoEnemigos`) e IA
 
-| Enemigo | Vida | Atq | Def | Vel | Crít | Habilidades (en orden de prioridad) |
-|---|---|---|---|---|---|---|
-| Goblin | 70 | 11 | 3 | 8 | 10 | **Daga sucia**: daño ×0.8 + Veneno (cd 3; se usa con 50 % de probabilidad si está lista) |
-| Esqueleto | 100 | 13 | 7 | 3 | 5 | **Reensamblar**: Regeneración propia (cd 5; si vida < 50 %) · **Huesos afilados**: Espinas propias (cd 4) |
-| Dragón | 180 | 17 | 9 | 5 | 10 | **Escamas**: Escudo propio (cd 5; si vida < 40 %) · **Aliento helado**: daño ×0.6 + Congelado (cd 5) · **Rugido**: Furia propia (cd 4) |
+| Nivel | Enemigo | Vida | Atq | Def | Vel | Crít | Habilidades (en orden de prioridad) |
+|---|---|---|---|---|---|---|---|
+| 1 | Goblin | 70 | 11 | 3 | 8 | 10 | **Daga sucia**: daño ×0.8 + Veneno al rival (cd 3; 50 % de probabilidad si está lista) |
+| 1 | Lobo | 60 | 12 | 2 | 12 | 15 | **Aullido**: Furia propia (cd 4; si vida < 60 %) |
+| 1 | Slime | 90 | 8 | 4 | 2 | 0 | **Gelatina**: Escudo propio (cd 4) · **Ácido**: daño ×0.5 + Veneno (cd 3) |
+| 2 | Esqueleto | 100 | 13 | 7 | 3 | 5 | **Reensamblar**: Regeneración propia (cd 5; si vida < 50 %) · **Huesos afilados**: Espinas propias (cd 4) |
+| 2 | Orco chamán | 110 | 14 | 6 | 5 | 10 | **Maldición**: purga al rival (cd 5; si el rival tiene ≥ 2 efectos BUFF) · **Tótem de sangre**: Vampirismo propio (cd 4) |
+| 3 | Golem de piedra | 160 | 15 | 14 | 1 | 0 | **Piel de piedra**: Espinas propias (cd 4) · **Pisotón**: daño ×1.0 + Congelado (cd 5) |
+| 3 | Bruja | 90 | 16 | 4 | 7 | 15 | **Pócima**: Regeneración propia (cd 4; si vida < 50 %) · **Hechizo gélido**: Congelado al rival (cd 4) · **Maleficio**: Veneno al rival (cd 3) |
+| 4 (jefe) | Dragón | 200 | 17 | 9 | 5 | 10 | **Escamas**: Escudo propio (cd 5; si vida < 40 %) · **Aliento helado**: daño ×0.6 + Congelado (cd 5) · **Rugido**: Furia propia (cd 4) |
+
+Cada enemigo **demuestra decoradores distintos**, así la expedición recorre todo el catálogo de efectos.
 
 **IA (`IaEnemigo`):** recorre las habilidades en orden de prioridad; usa la primera que tenga enfriamiento 0 **y** cumpla su condición. Si ninguna aplica → `Atacar`. Determinista salvo por las probabilidades, que usan `Aleatorio`.
 
@@ -344,6 +351,43 @@ boolean tieneEfecto(Combatiente exterior, String efectoId);
 List<Capa> capas(Combatiente exterior);   // afuera → adentro, con stats efectivas en cada capa
 ```
 
+### 5.5 Expedición (`Expedicion`, `ServicioExpedicion`)
+
+```
+Expedicion { id, semilla, claseId, estado: EN_CURSO | ESPERANDO_RECOMPENSA | COMPLETADA | FRACASADA,
+             nivelActual (1..4), List<String> enemigosPorNivel,     // sorteados al crear
+             PersonajeBase heroeBase,                               // la MISMA instancia en todos los encuentros
+             Map<Ranura, String> equipo,                            // piezas actuales
+             Combate combateActual, List<String> recompensasOfrecidas,
+             Estadisticas estadisticas }                            // vencidos, rondas, daño infligido y recibido
+```
+
+Ciclo de vida:
+```
+crear(claseId, equipoInicialId, semilla?)
+   → sortea los enemigos de cada nivel con Aleatorio(semilla)
+   → heroeBase = PersonajeBase(clase); vida = vidaMax efectiva con el equipo
+   → iniciarEncuentro(1)
+
+iniciarEncuentro(n):
+   heroe   = gestor.equipar(heroeBase, equipo)      # cadena NUEVA: solo equipo, sin efectos
+   enemigo = PersonajeBase(enemigosPorNivel[n])
+   combateActual = new Combate(heroe, enemigo)
+
+al terminar combateActual:
+   DERROTA  → estado = FRACASADA
+   VICTORIA y n == 4 → estado = COMPLETADA
+   VICTORIA y n < 4  → curar 30 % de la vidaMax efectiva (RF-24)
+                       recompensasOfrecidas = 3 piezas al azar, distintas, no equipadas
+                       estado = ESPERANDO_RECOMPENSA
+
+elegirRecompensa(piezaId | null):
+   si piezaId → equipo[ranura(pieza)] = piezaId     # reemplaza
+   nivelActual++ ; iniciarEncuentro(nivelActual) ; estado = EN_CURSO
+```
+
+> **Por qué así se purgan los efectos (RF-24):** al iniciar cada encuentro se **reconstruye la cadena desde el `PersonajeBase`** solo con el equipo. Los efectos temporales del encuentro anterior simplemente no se vuelven a envolver. El base (y por tanto la vida) es la misma instancia.
+
 ---
 
 ## 6. Eventos (`EventoCombate`, sealed)
@@ -364,7 +408,7 @@ Todo evento tiene `seq` (incremental por combate), `ronda` y `tipo`. Campos espe
 | `TURNO_PERDIDO` | `actorId`, `efectoId` | Overlay de hielo + aviso |
 | `MUERTE` | `combatienteId` | Retrato en gris, se cae |
 | `TURNO_TERMINADO` | `actorId` | — |
-| `COMBATE_TERMINADO` | `resultado` (VICTORIA, DERROTA) | Transición a la pantalla de resultado |
+| `COMBATE_TERMINADO` | `resultado` (VICTORIA, DERROTA) | Banner de victoria o derrota; luego transición a Recompensa o Resumen |
 
 ---
 
@@ -372,16 +416,32 @@ Todo evento tiene `seq` (incremental por combate), `ronda` y `tipo`. Campos espe
 
 ### 7.1 Pantallas y navegación
 ```
-[Selección] ──elige clase y enemigo──► [Preparación] ──"¡Al combate!"──► [Arena] ──fin──► [Resultado]
-     ▲                                                                                   │
-     └──────────────── "Volver a elegir" ◄────────────────── "Revancha" (misma config) ◄┘
+[Selección de clase] ─► [Preparación: pieza inicial] ─► [Mapa expedición] ─► [Arena] ─┬─ victoria ─► [Recompensa] ─► [Mapa] ─► ...
+                                                                                       └─ derrota / jefe vencido ─► [Resumen]
+[Resumen] ── "Nueva expedición" ─► [Selección de clase]
 ```
-Navegación por estado en Zustand (`pantalla`), sin router.
+Navegación por estado en Zustand (`pantalla`), sin router. La pantalla se **deriva** del `estado` de la expedición que devuelve el backend:
+`EN_CURSO` → Arena · `ESPERANDO_RECOMPENSA` → Recompensa · `COMPLETADA` / `FRACASADA` → Resumen.
 
-### 7.2 Selección
-Tres tarjetas de clase (retrato, stats en barras, habilidades) y tres de enemigo con "dificultad" (★ a ★★★).
+### 7.2 Selección de clase
+Tres tarjetas de clase: retrato, stats en barras y las 2 habilidades con su descripción.
 
-### 7.3 Preparación (inventario)
+### 7.2.b Mapa de la expedición
+```
+  [1 Goblin ✔] ─── [2 ???] ─── [3 ???] ─── [4 🐉 Dragón]
+                     ▲ estás aquí
+  Vida 68/95 · Cadena: Espada(Arquero)          [ Entrar al combate ]
+```
+Los niveles vencidos muestran el enemigo con ✔; el siguiente se revela al llegar a él.
+
+### 7.2.c Recompensa
+Tres tarjetas de pieza (ranura, bonus). Al pasar el mouse por una: **vista previa** de la cadena y las stats resultantes (`POST /api/vista-previa`), resaltando la pieza que se reemplazaría. Botones "Elegir" y "Omitir".
+
+### 7.2.d Resumen
+Resultado (COMPLETADA / FRACASADA), enemigos vencidos, rondas, daño infligido y recibido, y la cadena final de equipo. Botón "Nueva expedición".
+
+### 7.3 Preparación (pieza inicial)
+Se elige **1 pieza** (RF-02); el mismo componente de inventario se reutiliza en la pantalla de Recompensa.
 ```
 ┌─────────────────────────────┬─────────────────────────────────────┐
 │  INVENTARIO (arrastrables)  │      [ retrato del héroe ]          │
@@ -392,12 +452,12 @@ Tres tarjetas de clase (retrato, stats en barras, habilidades) y tres de enemigo
 └─────────────────────────────┴─────────────────────────────────────┘
 ```
 - dnd-kit: solo se puede soltar en la ranura correcta (la ranura se ilumina en verde o rojo).
-- Cada cambio llama a `POST /api/vista-previa` (con *debounce* de 200 ms) → stats y cadena calculadas por el backend (RF-04).
+- Cada cambio llama a `POST /api/vista-previa` (con *debounce* de 200 ms) → stats y cadena calculadas por el backend (RF-03).
 
 ### 7.4 Arena (pantalla principal)
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│ Ronda 3                                                 [⚙ inspector] │
+│ Nivel 2/4 · Esqueleto · Ronda 3                         [⚙ inspector] │
 ├────────────────────────────┬─────────────────────────────────────────┤
 │  HÉROE                     │                         ENEMIGO         │
 │  [retrato]  ███████░░ 84/120│ 112/180 ██████░░░  [retrato]            │

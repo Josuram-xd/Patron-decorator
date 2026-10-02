@@ -17,7 +17,7 @@ Patron-decorator/
 ├── README.md               ← estás aquí
 ├── AGENTS.md               ← reglas de trabajo para agentes (LEER PRIMERO)
 ├── CLAUDE.md               ← puntero a AGENTS.md para Claude Code
-├── .claude/agents/         ← definición de subagentes por rol
+├── .claude/agents/         ← subagentes por rol: rpg-dominio, rpg-motor, rpg-api, rpg-frontend, rpg-qa
 ├── specs/                  ← fuente de verdad (spec-driven)
 │   ├── requirements.md     ← QUÉ: requisitos funcionales y criterios de aceptación
 │   ├── architecture.md     ← CÓMO a nivel macro: capas, módulos, carpetas, stack
@@ -26,9 +26,13 @@ Patron-decorator/
 │   ├── tasks.md            ← plan de trabajo: tareas, dependencias, estado
 │   ├── open-questions.md   ← supuestos y dudas pendientes
 │   └── adr/                ← decisiones de arquitectura registradas
-├── backend/                ← (se crea en T-001) Java puro + Maven
-└── frontend/               ← (se crea en T-002) React + Vite + TS
+├── backend/                ← Java puro + Maven (solo carpetas; el código empieza en T-001)
+└── frontend/               ← React + Vite + TS (solo carpetas; el código empieza en T-002)
 ```
+
+## 🎮 El juego en una línea
+Expedición **PvE** de 4 niveles: el héroe (Guerrero, Mago o Arquero) enfrenta enemigos distintos sorteados por nivel
+(Goblin/Lobo/Slime → Esqueleto/Orco chamán → Golem/Bruja → 🐉 Dragón). Al ganar, elige equipo nuevo: su cadena de decoradores crece.
 
 ## 🔁 Flujo spec-driven
 
@@ -38,6 +42,7 @@ requirements.md ──► architecture.md / design.md / api-contract.md ──�
         └──────────────── open-questions.md (si la spec no alcanza) ◄──────────────────┘
 ```
 
+0. Para arrancar con agentes en Claude Code: *"Usa el agente rpg-dominio para hacer T-101"* (ver `specs/tasks.md`, sección de paralelismo).
 1. Nada se implementa si no está en una spec.
 2. Cada tarea de `tasks.md` referencia los requisitos (`RF-xx`) que cumple.
 3. Si el código necesita algo que la spec no dice, **se actualiza la spec primero**.

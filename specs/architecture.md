@@ -25,8 +25,8 @@
             └───────────────┬───────────────────────────┘
                             │ usa
             ┌───────────────▼───────────────────────────┐
-            │ motor          (Combate, turnos, IA,      │  ← casos de uso
-            │                 eventos, GestorEfectos)   │
+            │ motor          (Expedición, Combate,      │  ← casos de uso
+            │                 turnos, IA, GestorEfectos)│
             └───────────────┬───────────────────────────┘
                             │ usa
             ┌───────────────▼───────────────────────────┐
@@ -34,13 +34,13 @@
             │                 Stats, catálogos)         │
             └───────────────────────────────────────────┘
             ┌───────────────────────────────────────────┐
-            │ infraestructura (RepositorioCombates en   │  ← adaptador de salida
-            │                  memoria, Aleatorio)      │
+            │ infraestructura (RepositorioExpediciones  │  ← adaptador de salida
+            │                  en memoria, AleatorioJdk)│
             └───────────────────────────────────────────┘
 ```
 
 **Regla de dependencias:** `api → motor → dominio`. `infraestructura` implementa interfaces del `motor`.
-`dominio` no importa nada de las otras capas. Lo verifica un test de arquitectura simple (T-502).
+`dominio` no importa nada de las otras capas. Lo verifica un test de arquitectura simple (T-503).
 
 ### 2.1 Estructura de carpetas del backend
 
@@ -56,6 +56,9 @@ backend/
     │   │   ├── Stats.java                   ← record inmutable
     │   │   ├── Danio.java, ResultadoDanio.java, TipoDanio.java
     │   │   ├── Bando.java                   ← HEROE | ENEMIGO
+    │   │   ├── ContextoTurno.java           ← interfaz que usan los decoradores (la implementa motor)
+    │   │   ├── Aleatorio.java               ← interfaz (semilla) para tests deterministas
+    │   │   ├── evento/EventoCombate.java    ← sealed interface + records de cada tipo de evento
     │   │   ├── decorador/
     │   │   │   ├── EfectoDecorator.java     ← DECORADOR BASE (abstracta, delega todo)
     │   │   │   ├── Categoria.java           ← EQUIPO | BUFF | DEBUFF | CONTROL
@@ -76,28 +79,43 @@ backend/
     │   │   │   ├── ArmaduraCueroDecorator.java
     │   │   │   ├── ArmaduraDragonDecorator.java
     │   │   │   ├── AnilloFuegoDecorator.java
-    │   │   │   └── AmuletoVidaDecorator.java
+    │   │   │   ├── AmuletoVidaDecorator.java
+    │   │   │   └── BotasVientoDecorator.java
     │   │   └── catalogo/
     │   │       ├── CatalogoClases.java      ← Guerrero, Mago, Arquero
-    │   │       ├── CatalogoEnemigos.java    ← Goblin, Esqueleto, Dragón
-    │   │       ├── CatalogoEquipo.java      ← id → fábrica de decorador
+    │   │       ├── CatalogoEnemigos.java    ← 8 enemigos + grupos por nivel (design §4.8)
+    │   │       ├── DefinicionEnemigo.java   ← record: stats, habilidades, condiciones de IA
+    │   │       ├── CatalogoEquipo.java      ← id → (ranura, fábrica de decorador)
+    │   │       ├── Ranura.java              ← ARMA | ARMADURA | ACCESORIO
     │   │       ├── CatalogoEfectos.java     ← id → fábrica de decorador
-    │   │       └── Habilidad.java           ← record: id, nombre, enfriamiento, objetivo, efecto
+    │   │       ├── Habilidad.java           ← record (design §4.7)
+    │   │       └── AplicacionEfecto.java    ← record: efectoId + Objetivo (PROPIO | RIVAL)
     │   ├── motor/
-    │   │   ├── Combate.java                 ← agregado: estado, ronda, combatientes, log
-    │   │   ├── EstadoCombate.java           ← EN_CURSO | VICTORIA | DERROTA
-    │   │   ├── Accion.java                  ← sealed: Atacar | Defender | UsarHabilidad
-    │   │   ├── MotorCombate.java            ← ejecuta una ronda completa
-    │   │   ├── GestorEfectos.java           ← aplicar, refrescar, expirar, purgar, reconstruir cadena
-    │   │   ├── ReglasInteraccion.java       ← p. ej. Congelado elimina Furia
-    │   │   ├── IaEnemigo.java               ← decide la acción del enemigo
-    │   │   ├── ContextoTurno.java           ← acceso a eventos + aleatorio durante un turno
-    │   │   ├── evento/EventoCombate.java    ← sealed record con los tipos de evento
-    │   │   ├── Aleatorio.java               ← interfaz (semilla)
-    │   │   └── RepositorioCombates.java     ← interfaz (puerto)
+    │   │   ├── combate/
+    │   │   │   ├── Combate.java             ← agregado: estado, ronda, combatientes, log
+    │   │   │   ├── EstadoCombate.java       ← EN_CURSO | VICTORIA | DERROTA
+    │   │   │   ├── Accion.java              ← sealed: Atacar | Defender | UsarHabilidad | Pasar
+    │   │   │   ├── MotorCombate.java        ← ejecuta una ronda completa
+    │   │   │   ├── ContextoTurnoImpl.java   ← implementa dominio.ContextoTurno
+    │   │   │   ├── CalculadoraDanio.java    ← fórmulas de design §4.1
+    │   │   │   ├── IaEnemigo.java           ← decide la acción del enemigo
+    │   │   │   └── AccionInvalidaException.java
+    │   │   ├── efectos/
+    │   │   │   ├── GestorEfectos.java       ← aplicar, refrescar, expirar, purgar, reconstruir cadena
+    │   │   │   ├── ReglasInteraccion.java   ← tabla: Congelado elimina Furia, etc.
+    │   │   │   ├── Capa.java                ← record para inspeccionar la cadena
+    │   │   │   └── MotivoRetiro.java
+    │   │   ├── expedicion/
+    │   │   │   ├── Expedicion.java          ← agregado: niveles, enemigos, equipo, combate actual
+    │   │   │   ├── EstadoExpedicion.java    ← EN_CURSO | ESPERANDO_RECOMPENSA | COMPLETADA | FRACASADA
+    │   │   │   ├── ServicioExpedicion.java  ← casos de uso: crear, actuar, elegirRecompensa, vistaPrevia
+    │   │   │   ├── SorteoEnemigos.java      ← elige 1 enemigo por nivel con la semilla
+    │   │   │   ├── SorteoRecompensas.java   ← 3 piezas distintas no equipadas
+    │   │   │   └── Estadisticas.java
+    │   │   └── RepositorioExpediciones.java ← interfaz (puerto)
     │   ├── infraestructura/
-    │   │   ├── RepositorioCombatesMemoria.java
-    │   │   └── AleatorioJdk.java            ← envuelve java.util.random.RandomGenerator
+    │   │   ├── RepositorioExpedicionesMemoria.java
+    │   │   └── AleatorioJdk.java            ← implementa dominio.Aleatorio con java.util.random
     │   └── api/
     │       ├── Servidor.java                ← HttpServer + registro de rutas
     │       ├── Router.java                  ← método + patrón de ruta → handler
@@ -108,9 +126,9 @@ backend/
     │       ├── dto/                         ← records que reflejan api-contract.md
     │       ├── mapper/                      ← dominio/motor → DTO
     │       └── handlers/
-    │           ├── CatalogoHandler.java
+    │           ├── CatalogoHandler.java     ← clases, equipo, efectos, enemigos
     │           ├── VistaPreviaHandler.java
-    │           └── CombateHandler.java
+    │           └── ExpedicionHandler.java   ← crear, consultar, acciones, recompensa, inspector
     └── test/java/com/rpgdecorator/          ← mismo árbol de paquetes
         ├── dominio/...                      ← tests unitarios por decorador
         ├── motor/...                        ← tests de motor y escenarios
@@ -126,7 +144,7 @@ backend/
 | Build | **Maven 3.9** | Estándar; corre los tests y empaqueta un jar ejecutable |
 | HTTP | `com.sun.net.httpserver.HttpServer` | Viene en el JDK (módulo `jdk.httpserver`) |
 | JSON | Escrito a mano (`api/json`) | Requisito de Java puro; el contrato es pequeño |
-| Concurrencia | `ConcurrentHashMap` + `synchronized` por combate | Suficiente para uso local |
+| Concurrencia | `ConcurrentHashMap` + `synchronized` por expedición | Suficiente para uso local |
 | Tests | **JUnit 5** (solo scope `test`) | Ver ADR-001 |
 | HTTP en tests | `java.net.http.HttpClient` (JDK) | Tests de integración sin librerías |
 
@@ -157,10 +175,12 @@ frontend/
     ├── store/
     │   └── juegoStore.ts               ← Zustand: pantalla, selección, cola de eventos
     ├── pantallas/
-    │   ├── SeleccionPantalla.tsx       ← clase + enemigo
-    │   ├── PreparacionPantalla.tsx     ← inventario drag & drop + vista previa
+    │   ├── SeleccionPantalla.tsx       ← clase
+    │   ├── PreparacionPantalla.tsx     ← pieza inicial (drag & drop + vista previa)
+    │   ├── MapaPantalla.tsx            ← progreso de la expedición (4 niveles)
     │   ├── ArenaPantalla.tsx           ← combate
-    │   └── ResultadoPantalla.tsx
+    │   ├── RecompensaPantalla.tsx      ← elegir 1 de 3 piezas
+    │   └── ResumenPantalla.tsx         ← COMPLETADA / FRACASADA
     ├── componentes/
     │   ├── TarjetaCombatiente.tsx      ← retrato, barra de vida, stats
     │   ├── BarraVida.tsx
@@ -170,6 +190,7 @@ frontend/
     │   ├── LogCombate.tsx
     │   ├── NumeroFlotante.tsx          ← daño/curación animados
     │   ├── Inventario.tsx, RanuraEquipo.tsx, ItemEquipo.tsx
+    │   ├── NodoMapa.tsx                ← nivel del mapa (vencido / actual / oculto / jefe)
     │   └── ui/                         ← botones, tooltip, panel
     ├── animacion/
     │   └── reproductorEventos.ts       ← reproduce eventos[] en secuencia con delays
@@ -197,13 +218,14 @@ frontend/
 
 ```
 Click "Atacar"
-  └─► mutation POST /api/combates/{id}/acciones
-        └─► respuesta { combate, eventos[] }
+  └─► mutation POST /api/expediciones/{id}/acciones
+        └─► respuesta { expedicion, eventos[] }
               ├─► store.encolarEventos(eventos)
               │     └─► reproductorEventos: anima uno por uno (≈600 ms c/u)
               │            (número flotante, sacudida, ícono de efecto aparece o se va)
-              └─► al terminar la cola → se pinta el `combate` final (fuente de verdad)
-                    └─► PanelAcciones se reactiva si estado = EN_CURSO
+              └─► al terminar la cola → se pinta la `expedicion` final (fuente de verdad)
+                    └─► la pantalla se deriva de expedicion.estado
+                        (EN_CURSO → Arena · ESPERANDO_RECOMPENSA → Recompensa · COMPLETADA/FRACASADA → Resumen)
 ```
 
 El estado que se pinta siempre es el que devuelve el servidor; los eventos **solo** sirven para animar la transición.
