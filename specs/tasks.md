@@ -287,11 +287,13 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
 - **Depende de:** T-306, T-411
 - **Aceptación:** con `VITE_USE_MOCKS=false` se juega una expedición completa; las diferencias entre mocks y backend se corrigen **en el lado que no cumple el contrato**.
 
-### T-502 [ ] Escenarios de punta a punta (backend) · `QA`
+### T-502 [!] Escenarios de punta a punta (parcial) · `QA`
 - **Depende de:** T-207
 - **Specs:** requirements §5 (todos los Gherkin)
 - **Hacer:** `src/test/java/com/rpgdecorator/scenarios/*ScenarioTest.java`.
 - **Aceptación:** un test por escenario Gherkin, con semilla fija.
+- **Avance parcial:** hay tests con semilla fija para cinco escenarios que puede ejecutar el dominio y motor actuales.
+- **Bloqueo:** «Pasar al siguiente nivel conserva el equipo y purga los efectos» y «Misma semilla, mismos enemigos» requieren `Expedition` y `ExpeditionService` (T-206/T-207), aún no disponibles.
 
 ### T-503 [x] `ArchitectureTest` · `QA` ⚡
 - **Depende de:** T-207
@@ -341,3 +343,4 @@ El frontend **no espera** al backend: trabaja contra mocks (T-402) que cumplen `
 | 2026-10-02 | T-302 | API | `HttpApiServer`, `Router`, `Cors`, `HttpError` y `/api/health` + 11 tests de integración con `HttpClient` |
 | 2026-10-02 | T-206, T-207 | ENG | `Expedition`, `EnemyDraw`, `RewardDraw`, `RunStatistics`, `SeededRandom`, `ExpeditionService` y `ExpeditionRepository` alineados con el dominio real (`Slot` en `domain.catalog`) + 29 tests. 266 tests en verde; verificado con JDK 21 (`-Dmaven.compiler.release=21`) por Q-015 |
 | 2026-10-02 | T-503 | QA | `ArchitectureTest`: comprueba dependencias entre capas e imports prohibidos |
+| 2026-10-02 | T-502 | QA | Cinco escenarios con semilla fija; dos escenarios de expedición pendientes de T-206/T-207. `mvn test` no ejecutable aquí: instalado JDK 17, proyecto requiere Java 25 |
