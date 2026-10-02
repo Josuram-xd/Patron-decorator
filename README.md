@@ -7,8 +7,9 @@ Caso de estudio del **patrón Decorator** aplicado a un combate RPG por turnos.
 
 Cada efecto (`PoisonDecorator`, `ShieldDecorator`, `RageDecorator`, `FrozenDecorator`…) y cada pieza de equipo es un **decorador** que envuelve al personaje.
 
-> 🗣️ **Código 100 % en inglés**; specs y textos del juego en español (ADR-004).
 La UI muestra en vivo la pila de decoradores: `Furia(Envenenado(Espada(Guerrero)))`.
+
+> 🗣️ **Código 100 % en inglés**; specs y textos del juego en español (ADR-004).
 
 ---
 

@@ -73,7 +73,7 @@ El objetivo didáctico es **ver el patrón funcionando**: la UI muestra la caden
 
 ### Visualización / didáctica
 - **RF-19 — Estado visible.** La UI muestra en todo momento: vida, stats actuales, efectos activos con turnos restantes y enfriamientos.
-- **RF-20 — Inspector de cadena.** La UI muestra la cadena de decoradores de cada combatiente como texto (`Furia(Veneno(Espada(Guerrero)))`) y como pila visual por capas.
+- **RF-20 — Inspector de cadena.** La UI muestra la cadena de decoradores de cada combatiente como texto (`Furia(Envenenado(Espada(Guerrero)))`) y como pila visual por capas.
 - **RF-21 — Log de combate.** Se muestra un registro cronológico de los eventos de cada ronda.
 - **RF-22 — Animaciones.** Cada evento se anima: números de daño o curación flotando, sacudida al recibir un golpe, aparición o desaparición de íconos de efecto.
 - **RF-23 — Mapa de progreso.** Durante la expedición se ve el nivel actual, los enemigos vencidos y los pendientes.
@@ -116,12 +116,12 @@ Escenario: El escudo absorbe antes que la vida
   Y el Escudo se elimina de la cadena por quedar en 0
 
 Escenario: Silencio respeta el equipo
-  Dado un combatiente con cadena Furia(Veneno(ArmaduraDragon(Mago)))
+  Dado un combatiente con cadena Furia(Envenenado(Armadura de dragón(Mago)))
   Cuando recibe Silencio
-  Entonces su cadena es ArmaduraDragon(Mago)
+  Entonces su cadena es Armadura de dragón(Mago)
 
 Escenario: Pasar al siguiente nivel conserva el equipo y purga los efectos
-  Dado un héroe con cadena Furia(Veneno(Espada(Arquero))) y 40/95 de vida
+  Dado un héroe con cadena Furia(Envenenado(Espada(Arquero))) y 40/95 de vida
   Cuando vence al enemigo del nivel 1
   Entonces su cadena es Espada(Arquero)
   Y su vida es 40 + 28 = 68
