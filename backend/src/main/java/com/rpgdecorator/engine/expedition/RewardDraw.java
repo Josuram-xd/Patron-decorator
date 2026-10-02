@@ -32,7 +32,7 @@ public final class RewardDraw {
     public static List<String> draw(Collection<String> equippedIds, RandomSource random) {
         Objects.requireNonNull(equippedIds, "equippedIds");
         Objects.requireNonNull(random, "random");
-        List<String> candidates = new ArrayList<>(EquipmentCatalog.ids());
+        List<String> candidates = new ArrayList<>(EquipmentCatalog.all().stream().map(EquipmentCatalog.Item::id).toList());
         candidates.removeAll(equippedIds);
         int count = Math.min(COUNT, candidates.size());
         for (int i = 0; i < count; i++) {
